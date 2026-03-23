@@ -29,6 +29,11 @@ class NoClusterException(ECSException):
         )
 
 
+class ECSExecException(ECSException):
+    def __init__(self, command: str, err: str):
+        super().__init__(f"Command `{command}` failed with error: {err}")
+
+
 class ECS:
     def __init__(self, ecs_client, ssm_client, application_name: str, env: str):
         self.ecs_client = ecs_client
@@ -291,7 +296,10 @@ class ECS:
                     f"{application}-{environment}-{service}",
                 ],
             )
-            return service_response["services"][0]
+            services = service_response.get("services")
+            if services:
+                return services[0]
+
         except ClientError as err:
             raise PlatformException(f"Error retrieving ECS service: {err}")
 
@@ -303,3 +311,23 @@ class ECS:
             return response["tasks"]
         except ClientError as err:
             raise PlatformException(f"Error retrieving ECS tasks: {err}")
+
+    def execute(self, cluster, task, container, command):
+        aws_cli_cmd = [
+            "aws",
+            "ecs",
+            "execute-command",
+            "--cluster",
+            cluster,
+            "--task",
+            task,
+            "--container",
+            container,
+            "--command",
+            command,
+            "--interactive",
+        ]
+        try:
+            subprocess.run(aws_cli_cmd, check=True)
+        except Exception as e:
+            raise ECSExecException(" ".join(aws_cli_cmd), str(e))
