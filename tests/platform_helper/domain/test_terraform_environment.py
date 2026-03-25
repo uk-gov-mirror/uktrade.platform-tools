@@ -76,6 +76,7 @@ class TestGenerateTerraform:
         module_source_override,
     ):
         mocks = GenerateTerraformMocks()
+        mocks.mock_platform_helper_versioning.is_auto.return_value = False
         mocks.mock_platform_helper_versioning.get_template_version.return_value = (
             expected_platform_helper_version
         )
@@ -97,4 +98,46 @@ class TestGenerateTerraform:
             environment_name,
             expected_platform_helper_version,
             module_source_override,
+            None,
+        )
+
+    @pytest.mark.parametrize(
+        "use_module_source_override, expected_platform_helper_version, module_source_override",
+        [(False, "14.0.0", None), (True, "test-branch", "../local/path/")],
+    )
+    def test_generate_success_for_centralised_service(
+        self,
+        use_module_source_override,
+        expected_platform_helper_version,
+        module_source_override,
+    ):
+        class MockStatus:
+            def __init__(self, installed):
+                self.installed = installed
+
+        mocks = GenerateTerraformMocks()
+        mocks.mock_platform_helper_versioning.is_auto.return_value = True
+        mocks.mock_platform_helper_versioning.get_version_status.return_value = MockStatus("1.2.3")
+        mocks.mock_platform_helper_versioning.get_template_version.return_value = (
+            expected_platform_helper_version
+        )
+        environment_name = "test"
+
+        if use_module_source_override:
+            mocks.mock_platform_helper_versioning.get_extensions_module_source.return_value = (
+                module_source_override
+            )
+        else:
+            mocks.mock_platform_helper_versioning.get_extensions_module_source.return_value = None
+
+        terraform_environment = TerraformEnvironment(**mocks.params())
+
+        terraform_environment.generate(environment_name)
+
+        mocks.mock_manifest_provider.generate_environment_config.assert_called_once_with(
+            VALID_ENRICHED_CONFIG,
+            environment_name,
+            expected_platform_helper_version,
+            module_source_override,
+            "1.2.3",
         )
