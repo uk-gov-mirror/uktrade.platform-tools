@@ -38,6 +38,8 @@
         - [platform-helper database copy](#platform-helper-database-copy)
     - [platform-helper version](#platform-helper-version)
         - [platform-helper version get-platform-helper-for-project](#platform-helper-version-get-platform-helper-for-project)
+    - [platform-helper service](#platform-helper-service)
+        - [platform-helper service exec](#platform-helper-service-exec)
 
 # platform-helper
 
@@ -68,6 +70,7 @@ platform-helper <command> [--version]
 - [`notify` ↪](#platform-helper-notify)
 - [`pipeline` ↪](#platform-helper-pipeline)
 - [`secrets` ↪](#platform-helper-secrets)
+- [`service` ↪](#platform-helper-service)
 - [`version` ↪](#platform-helper-version)
 
 # platform-helper application
@@ -975,5 +978,61 @@ platform-helper version get-platform-helper-for-project [--pipeline <pipeline>]
 
 - `--pipeline <text>`
   - Take into account platform-tools version overrides in the specified pipeline
+- `--help <boolean>` _Defaults to False._
+  - Show this message and exit.
+
+# platform-helper service
+
+[↩ Parent](#platform-helper)
+
+    Commands for managing a live service.
+
+## Usage
+
+```
+platform-helper service exec 
+```
+
+## Options
+
+- `--help <boolean>` _Defaults to False._
+  - Show this message and exit.
+
+## Commands
+
+- [`exec` ↪](#platform-helper-service-exec)
+
+# platform-helper service exec
+
+[↩ Parent](#platform-helper-service)
+
+    Opens a shell for a given container.
+
+## Usage
+
+```
+platform-helper service exec --app <application> --env <environment> --name <name> 
+                             [--command <command>] [--container <container>] 
+                             [--task-id <task_id>] 
+```
+
+## Options
+
+- `--app
+-a <text>`
+  - Application name
+- `--env
+-e <text>`
+  - Environment name
+- `--name
+-n <text>`
+  - Name of the service
+- `--command
+-c <text>`
+  - Optional. The command that is passed to a running container. (default 'launcher /bin/bash')
+- `--container <text>`
+  - Optional. [Note: This is an advanced feature and not yet fully supported.  In most cases only the essential container can be exec'd into.] The specific container you want to exec in. By default the first essential container will be used.
+- `--task-id <text>`
+  - Optional. ID of the task you want to exec into.
 - `--help <boolean>` _Defaults to False._
   - Show this message and exit.
