@@ -15,7 +15,12 @@ resource "aws_codepipeline" "database_copy_pipeline" {
   depends_on     = [aws_iam_role_policy.artifact_store_access_for_database_pipeline]
   pipeline_type  = "V2"
   execution_mode = "QUEUED"
-  tags           = local.tags
+  tags = merge(
+    local.tags,
+    {
+      platform-version = var.pinned_version != null ? var.pinned_version : "Not pinned"
+    }
+  )
 
   variable {
     name          = "PLATFORM_HELPER_VERSION_OVERRIDE"
