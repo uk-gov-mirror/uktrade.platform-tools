@@ -136,7 +136,7 @@ resource "aws_codebuild_project" "codebase_install_tools" {
   name           = "${var.application}-${var.codebase}-codebase-install-tools"
   description    = "Installs shared build tools for reuse across stages"
   build_timeout  = 5
-  service_role   = aws_iam_role.codebase_deploy.arn
+  service_role   = "arn:aws:iam::011755346992:role/dev-test-role-dbtp-2268"
   encryption_key = aws_kms_key.artifact_store_kms_key.arn
 
   artifacts {
