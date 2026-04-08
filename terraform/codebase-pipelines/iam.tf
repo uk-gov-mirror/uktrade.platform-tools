@@ -515,7 +515,7 @@ data "aws_iam_policy_document" "dns_account_assume_role" {
     actions = [
       "sts:AssumeRole",
     ]
-    resources = local.cache_invalidation_assumed_roles
+    resources = local.new_cache_invalidation_assumed_roles
   }
 }
 
