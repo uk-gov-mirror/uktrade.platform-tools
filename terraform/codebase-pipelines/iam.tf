@@ -554,7 +554,7 @@ data "aws_iam_policy_document" "invalidate_cache_assume_role" {
 resource "aws_iam_role" "invalidate_cache" {
   for_each           = toset(local.cache_invalidation_enabled ? [""] : [])
   name               = "${var.application}-${var.codebase}-invalidate-cache"
-  assume_role_policy = data.aws_iam_policy_document.assume_invalidation_policy[each.key].json
+  assume_role_policy = data.aws_iam_policy_document.invalidate_cache_assume_role[each.key].json
   tags               = local.tags
 }
 
