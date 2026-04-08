@@ -33,8 +33,8 @@ locals {
 
   dns_account_ids = distinct([for env in local.base_env_config : env.dns_account])
 
-  # If its managed, then you change the role that it does
   cache_invalidation_assumed_roles = [for id in local.dns_account_ids : "arn:aws:iam::${id}:role/cloudfront-invalidation-assumed-role"]
+  new_cache_invalidation_assumed_roles = [for id in local.dns_account_ids : "arn:aws:iam::${id}:role/dev-test-role-dbtp-2268"]
 
   environments_requiring_cache_invalidation = distinct([for d in try(values(var.cache_invalidation.domains), []) : d.environment])
 
