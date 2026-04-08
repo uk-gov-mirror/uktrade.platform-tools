@@ -507,17 +507,17 @@ data "aws_iam_policy_document" "codestar_access_for_codebase_pipeline" {
   }
 }
 
-data "aws_iam_policy_document" "dns_account_assume_role" {
-  for_each = toset(local.cache_invalidation_enabled ? [""] : [])
-  statement {
-    sid    = "AllowDNSAccountAccess"
-    effect = "Allow"
-    actions = [
-      "sts:AssumeRole",
-    ]
-    resources = local.new_cache_invalidation_assumed_roles
-  }
-}
+# data "aws_iam_policy_document" "dns_account_assume_role" {
+#   for_each = toset(local.cache_invalidation_enabled ? [""] : [])
+#   statement {
+#     sid    = "AllowDNSAccountAccess"
+#     effect = "Allow"
+#     actions = [
+#       "sts:AssumeRole",
+#     ]
+#     resources = local.new_cache_invalidation_assumed_roles
+#   }
+# }
 
 data "aws_iam_policy_document" "assume_cache_invalidation_role" {
   for_each = toset(local.cache_invalidation_enabled ? [""] : [])
@@ -600,7 +600,7 @@ resource "aws_iam_role_policy" "dns_account_assume_role_for_cache_invalidation" 
   for_each = toset(local.cache_invalidation_enabled ? [""] : [])
   name     = "${var.application}-${var.codebase}-dns-account-assume-role"
   role     = aws_iam_role.invalidate_cache[each.key].name
-  policy   = data.aws_iam_policy_document.dns_account_assume_role[each.key].json
+  policy   = data.aws_iam_policy_document.invalidate_cache_assume_role[each.key].json
 }
 
 resource "aws_iam_role" "update_alb_rules" {
