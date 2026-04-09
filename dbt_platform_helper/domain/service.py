@@ -41,7 +41,7 @@ from dbt_platform_helper.providers.yaml_file import YamlFileProvider
 from dbt_platform_helper.utils.application import load_application
 from dbt_platform_helper.utils.deep_merge import deep_merge
 
-SERVICE_TYPES = ["Load Balanced Web Service", "Backend Service"]
+SERVICE_TYPES = ["Load Balanced Web Service", "Backend Service", "Scheduled Job"]
 DEPLOYMENT_TIMEOUT_SECONDS = 1200
 POLL_INTERVAL_SECONDS = 5
 
@@ -321,6 +321,11 @@ class ServiceManager:
                             service_manifest["image"]["healthcheck"]["start_period"] = int(
                                 start_period.rstrip("s")
                             )
+                    if "build" in service_manifest["image"]:
+                        service_manifest["image"][
+                            "location"
+                        ] = "563763463626.dkr.ecr.eu-west-2.amazonaws.com/demodjango/application"
+                        del service_manifest["image"]["build"]
 
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):
