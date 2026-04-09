@@ -43,23 +43,23 @@ def copilot_manifest(tmp_path):
     return tmp_path
 
 
-@pytest.fixture
-def copilot_scheduled_job_manifest(tmp_path):
-    copilot_dir = tmp_path / "copilot" / "my-service"
-    copilot_dir.mkdir(parents=True)
-    manifest_path = copilot_dir / "manifest.yml"
-    manifest_content = {
-        "name": "my-scheduled-service",
-        "type": "Scheduled Job",
-        "on": {"schedule": "0 1 * * *"},
-        "retries": "1",
-        "timeout": "60m",
-        "image": {"build": "./copilot/developer-database-dumper/image/Dockerfile"},
-        "variables": {"S3_BUCKET_NAME": "${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}"},
-    }
-    with open(manifest_path, "w") as f:
-        yaml.safe_dump(manifest_content, f)
-    return tmp_path
+# @pytest.fixture
+# def copilot_scheduled_job_manifest(tmp_path):
+#     copilot_dir = tmp_path / "copilot" / "my-service"
+#     copilot_dir.mkdir(parents=True)
+#     manifest_path = copilot_dir / "manifest.yml"
+#     manifest_content = {
+#         "name": "my-scheduled-service",
+#         "type": "Scheduled Job",
+#         "on": {"schedule": "0 1 * * *"},
+#         "retries": "1",
+#         "timeout": "60m",
+#         "image": {"build": "./copilot/developer-database-dumper/image/Dockerfile"},
+#         "variables": {"S3_BUCKET_NAME": "${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}"},
+#     }
+#     with open(manifest_path, "w") as f:
+#         yaml.safe_dump(manifest_content, f)
+#     return tmp_path
 
 
 def test_migrate_copilot_manifests_creates_services_directory_and_files(tmp_path, copilot_manifest):
@@ -810,8 +810,17 @@ class TestServiceExecRaises:
 
 
 def test_migrate_copilot_scheduled_job_generates_expected_service_config(tmp_path):
+    config_path = tmp_path / "platform-config.yml"
+    config_data = {
+        "application": "demodjango",
+        "environments": {"*": {"accounts": {"deploy": {"id": "563763463626"}}}},
+    }
+
+    with open(config_path, "w") as f:
+        yaml.safe_dump(config_data, f)
+
     account_id = "563763463626"
-    ecr_repo = "demodjango/application"
+    ecr_repo = "demodjango/my-scheduled-service"
 
     copilot_dir = tmp_path / "copilot" / "my-scheduled-service"
     copilot_dir.mkdir(parents=True)

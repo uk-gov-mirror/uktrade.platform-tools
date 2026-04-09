@@ -10,6 +10,9 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
+import yaml
+
+from dbt_platform_helper.constants import PLATFORM_CONFIG_FILE
 from dbt_platform_helper.constants import PLATFORM_HELPER_PACKAGE_NAME
 from dbt_platform_helper.constants import PLATFORM_HELPER_VERSION_OVERRIDE_KEY
 from dbt_platform_helper.constants import SERVICE_CONFIG_FILE
@@ -322,10 +325,19 @@ class ServiceManager:
                                 start_period.rstrip("s")
                             )
                     if "build" in service_manifest["image"]:
+                        del service_manifest["image"]["build"]
+
+                        with open(PLATFORM_CONFIG_FILE, "r") as f:
+                            config = yaml.safe_load(f)
+
+                        application = config["application"]
+                        account_id = config["environments"]["*"]["accounts"]["deploy"]["id"]
+                        name = service_manifest["name"]
+                        ecr_repo = f"{application}/{name}"
+
                         service_manifest["image"][
                             "location"
-                        ] = "563763463626.dkr.ecr.eu-west-2.amazonaws.com/demodjango/application"
-                        del service_manifest["image"]["build"]
+                        ] = f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"
 
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):
