@@ -339,6 +339,18 @@ class ServiceManager:
                             "location"
                         ] = f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"
 
+                if "on" in service_manifest:
+                    if "@" in service_manifest["on"]["schedule"]:
+                        rate_conversion = {"@hourly": "rate(1 hours)", "@daily": "rate(1 days)"}
+                        schedule = service_manifest["on"]["schedule"]
+                        service_manifest["on"]["schedule"] = rate_conversion.get(schedule, schedule)
+                    elif "*" in service_manifest["on"]["schedule"]:
+                        split_cron = service_manifest["on"]["schedule"].split()
+                        if split_cron[2] == split_cron[4]:
+                            split_cron[4] = "?"
+                        schedule = " ".join(split_cron)
+                        service_manifest["on"]["schedule"] = schedule
+
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):
                         if "cooldown" in service_manifest.get("count"):

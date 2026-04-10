@@ -43,25 +43,6 @@ def copilot_manifest(tmp_path):
     return tmp_path
 
 
-# @pytest.fixture
-# def copilot_scheduled_job_manifest(tmp_path):
-#     copilot_dir = tmp_path / "copilot" / "my-service"
-#     copilot_dir.mkdir(parents=True)
-#     manifest_path = copilot_dir / "manifest.yml"
-#     manifest_content = {
-#         "name": "my-scheduled-service",
-#         "type": "Scheduled Job",
-#         "on": {"schedule": "0 1 * * *"},
-#         "retries": "1",
-#         "timeout": "60m",
-#         "image": {"build": "./copilot/developer-database-dumper/image/Dockerfile"},
-#         "variables": {"S3_BUCKET_NAME": "${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}"},
-#     }
-#     with open(manifest_path, "w") as f:
-#         yaml.safe_dump(manifest_content, f)
-#     return tmp_path
-
-
 def test_migrate_copilot_manifests_creates_services_directory_and_files(tmp_path, copilot_manifest):
     output_dir = tmp_path / "services"
     file_path = output_dir / "my-service/service-config.yml"
@@ -807,6 +788,39 @@ class TestServiceExecRaises:
 
 
 # SCHEDULED JOBS TESTS --------------------------------------------------------------
+@pytest.fixture
+def copilot_scheduled_job_manifest(tmp_path):
+    account_id = "563763463626"
+    ecr_repo = "demodjango/my-scheduled-service"
+
+    copilot_dir = tmp_path / "copilot" / "my-scheduled-service"
+    copilot_dir.mkdir(parents=True)
+    manifest_path = copilot_dir / "manifest.yml"
+    manifest_content = {
+        "name": "my-scheduled-service",
+        "type": "Scheduled Job",
+        "on": {"schedule": "@hourly"},
+        "retries": "1",
+        "timeout": "60m",
+        "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"},
+        "variables": {"S3_BUCKET_NAME": "${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}"},
+    }
+    with open(manifest_path, "w") as f:
+        yaml.safe_dump(manifest_content, f)
+    return tmp_path
+
+
+def test_migrate_scheduled_job_copilot_manifests_creates_services_directory_and_files(
+    tmp_path, copilot_scheduled_job_manifest
+):
+    output_dir = tmp_path / "services"
+    file_path = output_dir / "my-scheduled-service/service-config.yml"
+
+    os.chdir(tmp_path)
+    service_manager = ServiceManager()
+    service_manager.migrate_copilot_manifests()
+
+    assert file_path.exists()
 
 
 def test_migrate_scheduled_job_converts_image_build_to_location(tmp_path):
@@ -930,6 +944,51 @@ def test_migrate_scheduled_job_removes_image_tag(tmp_path):
         "name": "my-scheduled-service",
         "type": "Scheduled Job",
         "on": {"schedule": "none"},
+        "retries": "1",
+        "timeout": "60m",
+        "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"},
+    }
+
+    os.chdir(tmp_path)
+    service_manager = ServiceManager()
+    service_manager.migrate_copilot_manifests()
+
+    with open(tmp_path / "services/my-scheduled-service/service-config.yml") as f:
+        service_config = yaml.safe_load(f)
+
+    assert service_config == expected_service_config
+
+
+@pytest.mark.parametrize(
+    "test_input,expected",
+    [("@hourly", "rate(1 hours)"), ("@daily", "rate(1 days)"), ("5 * * * *", "5 * * * ?")],
+    ids=["hourly", "daily", "five minutes past each hour"],
+)
+def test_migrate_scheduled_job_converts_schedule_to_eventbridge_format(
+    tmp_path, test_input, expected
+):
+    account_id = "563763463626"
+    ecr_repo = "demodjango/my-scheduled-service"
+
+    copilot_dir = tmp_path / "copilot" / "my-scheduled-service"
+    copilot_dir.mkdir(parents=True)
+    manifest_path = copilot_dir / "manifest.yml"
+
+    manifest_content = {
+        "name": "my-scheduled-service",
+        "type": "Scheduled Job",
+        "on": {"schedule": test_input},
+        "retries": "1",
+        "timeout": "60m",
+        "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"},
+    }
+    with open(manifest_path, "w") as f:
+        yaml.safe_dump(manifest_content, f)
+
+    expected_service_config = {
+        "name": "my-scheduled-service",
+        "type": "Scheduled Job",
+        "on": {"schedule": expected},
         "retries": "1",
         "timeout": "60m",
         "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"},
