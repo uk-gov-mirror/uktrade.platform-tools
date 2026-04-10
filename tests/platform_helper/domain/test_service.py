@@ -809,7 +809,7 @@ class TestServiceExecRaises:
 # SCHEDULED JOBS TESTS --------------------------------------------------------------
 
 
-def test_migrate_copilot_scheduled_job_generates_expected_service_config(tmp_path):
+def test_migrate_scheduled_job_converts_image_build_to_location(tmp_path):
     config_path = tmp_path / "platform-config.yml"
     config_data = {
         "application": "demodjango",
@@ -856,6 +856,83 @@ def test_migrate_copilot_scheduled_job_generates_expected_service_config(tmp_pat
         "variables": {
             "S3_BUCKET_NAME": "${PLATFORM_APPLICATION_NAME}-${PLATFORM_ENVIRONMENT_NAME}"
         },
+    }
+
+    os.chdir(tmp_path)
+    service_manager = ServiceManager()
+    service_manager.migrate_copilot_manifests()
+
+    with open(tmp_path / "services/my-scheduled-service/service-config.yml") as f:
+        service_config = yaml.safe_load(f)
+
+    assert service_config == expected_service_config
+
+
+def test_migrate_scheduled_job_removes_network_block(tmp_path):
+    account_id = "563763463626"
+    ecr_repo = "demodjango/my-scheduled-service"
+
+    copilot_dir = tmp_path / "copilot" / "my-scheduled-service"
+    copilot_dir.mkdir(parents=True)
+    manifest_path = copilot_dir / "manifest.yml"
+
+    manifest_content = {
+        "name": "my-scheduled-service",
+        "type": "Scheduled Job",
+        "on": {"schedule": "none"},
+        "retries": "1",
+        "timeout": "60m",
+        "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"},
+        "network": {"connect": "true", "vpc": {"placement": "private"}},
+    }
+    with open(manifest_path, "w") as f:
+        yaml.safe_dump(manifest_content, f)
+
+    expected_service_config = {
+        "name": "my-scheduled-service",
+        "type": "Scheduled Job",
+        "on": {"schedule": "none"},
+        "retries": "1",
+        "timeout": "60m",
+        "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"},
+    }
+
+    os.chdir(tmp_path)
+    service_manager = ServiceManager()
+    service_manager.migrate_copilot_manifests()
+
+    with open(tmp_path / "services/my-scheduled-service/service-config.yml") as f:
+        service_config = yaml.safe_load(f)
+
+    assert service_config == expected_service_config
+
+
+def test_migrate_scheduled_job_removes_image_tag(tmp_path):
+    account_id = "563763463626"
+    ecr_repo = "demodjango/my-scheduled-service"
+
+    copilot_dir = tmp_path / "copilot" / "my-scheduled-service"
+    copilot_dir.mkdir(parents=True)
+    manifest_path = copilot_dir / "manifest.yml"
+
+    manifest_content = {
+        "name": "my-scheduled-service",
+        "type": "Scheduled Job",
+        "on": {"schedule": "none"},
+        "retries": "1",
+        "timeout": "60m",
+        "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}:some-tag"},
+    }
+    with open(manifest_path, "w") as f:
+        yaml.safe_dump(manifest_content, f)
+
+    expected_service_config = {
+        "name": "my-scheduled-service",
+        "type": "Scheduled Job",
+        "on": {"schedule": "none"},
+        "retries": "1",
+        "timeout": "60m",
+        "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"},
     }
 
     os.chdir(tmp_path)
