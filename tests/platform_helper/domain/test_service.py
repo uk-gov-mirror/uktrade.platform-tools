@@ -804,7 +804,7 @@ def copilot_scheduled_job_manifest(tmp_path):
         "timeout": "60m",
     }
 
-    def _make(extra=None | dict):
+    def _make(extra={}):
         if extra:
             copilot_manifest_content.update(extra)
         with open(manifest_path, "w") as f:
@@ -816,12 +816,14 @@ def copilot_scheduled_job_manifest(tmp_path):
 
 
 def test_migrate_scheduled_job_copilot_manifests_creates_services_directory_and_files(
-    tmp_path, copilot_scheduled_job_manifest
+    copilot_scheduled_job_manifest,
 ):
-    output_dir = tmp_path / "services"
+    path = copilot_scheduled_job_manifest()
+
+    output_dir = path / "services"
     file_path = output_dir / "my-scheduled-service/service-config.yml"
 
-    os.chdir(tmp_path)
+    os.chdir(path)
     service_manager = ServiceManager()
     service_manager.migrate_copilot_manifests()
 
