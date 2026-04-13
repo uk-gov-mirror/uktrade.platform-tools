@@ -349,13 +349,16 @@ class ServiceManager:
                             "@yearly": "0 * * * ?",
                         }
                         schedule = service_manifest["on"]["schedule"]
-                        service_manifest["on"]["schedule"] = rate_conversion.get(schedule, schedule)
+                        service_manifest["schedule"] = rate_conversion.get(schedule, schedule)
+                        del service_manifest["on"]
+
                     elif "*" in service_manifest["on"]["schedule"]:
                         split_cron = service_manifest["on"]["schedule"].split()
                         if split_cron[2] == split_cron[4]:
                             split_cron[4] = "?"
                         schedule = " ".join(split_cron)
-                        service_manifest["on"]["schedule"] = schedule
+                        service_manifest["schedule"] = schedule
+                        del service_manifest["on"]
 
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):

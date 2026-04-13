@@ -995,7 +995,7 @@ def test_migrate_scheduled_job_converts_schedule_to_eventbridge_format(
     expected_service_config = {
         "name": "my-scheduled-service",
         "type": "Scheduled Job",
-        "on": {"schedule": expected},
+        "schedule": expected,
         "retries": "1",
         "timeout": "60m",
         "image": {"location": f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"},
