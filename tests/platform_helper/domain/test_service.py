@@ -38,16 +38,24 @@ def copilot_manifest(tmp_path):
         },
         "variables": {"S3_BUCKET_NAME": "${COPILOT_APPLICATION_NAME}-${COPILOT_ENVIRONMENT_NAME}"},
     }
-    with open(manifest_path, "w") as f:
-        yaml.safe_dump(manifest_content, f)
-    return tmp_path
+
+    def _make(extra={}):
+        if extra:
+            manifest_content.update(extra)
+        with open(manifest_path, "w") as f:
+            yaml.safe_dump(manifest_content, f)
+
+        return tmp_path
+
+    return _make
 
 
-def test_migrate_copilot_manifests_creates_services_directory_and_files(tmp_path, copilot_manifest):
-    output_dir = tmp_path / "services"
+def test_migrate_copilot_manifests_creates_services_directory_and_files(copilot_manifest):
+    path = copilot_manifest()
+    output_dir = path / "services"
     file_path = output_dir / "my-service/service-config.yml"
 
-    os.chdir(tmp_path)
+    os.chdir(path)
     service_manager = ServiceManager()
     service_manager.migrate_copilot_manifests()
 
@@ -55,6 +63,7 @@ def test_migrate_copilot_manifests_creates_services_directory_and_files(tmp_path
 
 
 def test_migrate_copilot_manifests_generates_expected_service_config(tmp_path, copilot_manifest):
+    path = copilot_manifest()
     expected_service_config = {
         "name": "my-service",
         "type": "Load Balanced Web Service",
@@ -67,11 +76,11 @@ def test_migrate_copilot_manifests_generates_expected_service_config(tmp_path, c
         },
     }
 
-    os.chdir(tmp_path)
+    os.chdir(path)
     service_manager = ServiceManager()
     service_manager.migrate_copilot_manifests()
 
-    with open(tmp_path / "services/my-service/service-config.yml") as f:
+    with open(path / "services/my-service/service-config.yml") as f:
         service_config = yaml.safe_load(f)
 
     assert service_config == expected_service_config
@@ -802,6 +811,9 @@ def copilot_scheduled_job_manifest(tmp_path):
         "on": {"schedule": "none"},
         "retries": "1",
         "timeout": "60m",
+        "image": {
+            "location": "123456789012.dkr.ecr.eu-west-2.amazonaws.com/demodjango/my-scheduled-service:a-tag"
+        },
     }
 
     def _make(extra={}):
@@ -825,6 +837,9 @@ def expected_scheduled_job_config():
             "schedule": "none",
             "retries": "1",
             "timeout": "60m",
+            "image": {
+                "location": "123456789012.dkr.ecr.eu-west-2.amazonaws.com/demodjango/my-scheduled-service"
+            },
         }
 
         if extra:
