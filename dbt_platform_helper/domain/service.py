@@ -360,6 +360,10 @@ class ServiceManager:
                         service_manifest["schedule"] = schedule
                         del service_manifest["on"]
 
+                    elif "none" in service_manifest["on"]["schedule"]:
+                        service_manifest["schedule"] = "none"
+                        del service_manifest["on"]
+
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):
                         if "cooldown" in service_manifest.get("count"):
