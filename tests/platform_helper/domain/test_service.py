@@ -50,6 +50,29 @@ def copilot_manifest(tmp_path):
     return _make
 
 
+@pytest.fixture
+def expected_service_config():
+    def _make(extra={}):
+        expected_content = {
+            "name": "my-service",
+            "type": "Load Balanced Web Service",
+            "environments": {
+                "dev": {"http": {"alias": ["test.alias.com"]}},
+                "prod": {"http": {"alias": ["test.alias.com", "test2.alias.com"]}},
+            },
+            "variables": {
+                "S3_BUCKET_NAME": "${PLATFORM_APPLICATION_NAME}-${PLATFORM_ENVIRONMENT_NAME}"
+            },
+        }
+
+        if extra:
+            expected_content.update(extra)
+
+        return expected_content
+
+    return _make
+
+
 def test_migrate_copilot_manifests_creates_services_directory_and_files(copilot_manifest):
     path = copilot_manifest()
     output_dir = path / "services"
@@ -62,19 +85,10 @@ def test_migrate_copilot_manifests_creates_services_directory_and_files(copilot_
     assert file_path.exists()
 
 
-def test_migrate_copilot_manifests_generates_expected_service_config(copilot_manifest):
+def test_migrate_copilot_manifests_generates_expected_service_config(
+    copilot_manifest, expected_service_config
+):
     path = copilot_manifest()
-    expected_service_config = {
-        "name": "my-service",
-        "type": "Load Balanced Web Service",
-        "environments": {
-            "dev": {"http": {"alias": ["test.alias.com"]}},
-            "prod": {"http": {"alias": ["test.alias.com", "test2.alias.com"]}},
-        },
-        "variables": {
-            "S3_BUCKET_NAME": "${PLATFORM_APPLICATION_NAME}-${PLATFORM_ENVIRONMENT_NAME}"
-        },
-    }
 
     os.chdir(path)
     service_manager = ServiceManager()
@@ -83,10 +97,10 @@ def test_migrate_copilot_manifests_generates_expected_service_config(copilot_man
     with open(path / "services/my-service/service-config.yml") as f:
         service_config = yaml.safe_load(f)
 
-    assert service_config == expected_service_config
+    assert service_config == expected_service_config()
 
 
-def test_migrate_service_configs_writable_dirs(copilot_manifest):
+def test_migrate_service_configs_writable_dirs(copilot_manifest, expected_service_config):
     path = copilot_manifest(
         {
             "sidecars": {
@@ -99,20 +113,13 @@ def test_migrate_service_configs_writable_dirs(copilot_manifest):
         }
     )
 
-    expected_service_config = {
-        "name": "my-service",
-        "type": "Load Balanced Web Service",
-        "environments": {
-            "dev": {"http": {"alias": ["test.alias.com"]}},
-            "prod": {"http": {"alias": ["test.alias.com", "test2.alias.com"]}},
-        },
-        "image": {},
-        "sidecars": {},
-        "storage": {"readonly_fs": False, "writable_directories": ["/write/dir"]},
-        "variables": {
-            "S3_BUCKET_NAME": "${PLATFORM_APPLICATION_NAME}-${PLATFORM_ENVIRONMENT_NAME}"
-        },
-    }
+    expected_service_config = expected_service_config(
+        {
+            "image": {},
+            "sidecars": {},
+            "storage": {"readonly_fs": False, "writable_directories": ["/write/dir"]},
+        }
+    )
 
     os.chdir(path)
     service_manager = ServiceManager()
@@ -124,7 +131,7 @@ def test_migrate_service_configs_writable_dirs(copilot_manifest):
     assert service_config == expected_service_config
 
 
-def test_migrate_service_configs_no_writable_dirs(copilot_manifest):
+def test_migrate_service_configs_no_writable_dirs(copilot_manifest, expected_service_config):
     path = copilot_manifest(
         {
             "sidecars": {
@@ -140,25 +147,18 @@ def test_migrate_service_configs_no_writable_dirs(copilot_manifest):
         }
     )
 
-    expected_service_config = {
-        "name": "my-service",
-        "type": "Load Balanced Web Service",
-        "environments": {
-            "dev": {"http": {"alias": ["test.alias.com"]}},
-            "prod": {"http": {"alias": ["test.alias.com", "test2.alias.com"]}},
-        },
-        "sidecars": {
-            "not-real": {
-                "port": 2772,
-                "image": "not-real-image",
-                "essential": True,
-            }
-        },
-        "storage": {"readonly_fs": False, "writable_directories": []},
-        "variables": {
-            "S3_BUCKET_NAME": "${PLATFORM_APPLICATION_NAME}-${PLATFORM_ENVIRONMENT_NAME}"
-        },
-    }
+    expected_service_config = expected_service_config(
+        {
+            "sidecars": {
+                "not-real": {
+                    "port": 2772,
+                    "image": "not-real-image",
+                    "essential": True,
+                }
+            },
+            "storage": {"readonly_fs": False, "writable_directories": []},
+        }
+    )
 
     os.chdir(path)
     service_manager = ServiceManager()
