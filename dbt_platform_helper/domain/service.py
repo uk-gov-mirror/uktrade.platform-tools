@@ -341,7 +341,13 @@ class ServiceManager:
 
                 if "on" in service_manifest:
                     if "@" in service_manifest["on"]["schedule"]:
-                        rate_conversion = {"@hourly": "rate(1 hours)", "@daily": "rate(1 days)"}
+                        rate_conversion = {
+                            "@hourly": "rate(1 hours)",
+                            "@daily": "rate(1 days)",
+                            "@weekly": "0 0 * * 1",
+                            "@monthly": "0 0 1 * *",
+                            "@yearly": "0 * * * ?",
+                        }
                         schedule = service_manifest["on"]["schedule"]
                         service_manifest["on"]["schedule"] = rate_conversion.get(schedule, schedule)
                     elif "*" in service_manifest["on"]["schedule"]:

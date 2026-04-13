@@ -961,8 +961,15 @@ def test_migrate_scheduled_job_removes_image_tag(tmp_path):
 
 @pytest.mark.parametrize(
     "test_input,expected",
-    [("@hourly", "rate(1 hours)"), ("@daily", "rate(1 days)"), ("5 * * * *", "5 * * * ?")],
-    ids=["hourly", "daily", "five minutes past each hour"],
+    [
+        ("@hourly", "rate(1 hours)"),
+        ("@daily", "rate(1 days)"),
+        ("@weekly", "0 0 * * 1"),
+        ("@monthly", "0 0 1 * *"),
+        ("@yearly", "0 * * * ?"),
+        ("5 * * * *", "5 * * * ?"),
+    ],
+    ids=["hourly", "daily", "weekly", "monthly", "yearly", "five minutes past each hour"],
 )
 def test_migrate_scheduled_job_converts_schedule_to_eventbridge_format(
     tmp_path, test_input, expected
