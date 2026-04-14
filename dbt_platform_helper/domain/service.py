@@ -225,6 +225,8 @@ class ServiceManager:
                 return True
             return None
 
+        # Regenerate manifest with the *schedule* included after the *type* field
+        # This is required to avoid sending the *schedule* field to the bottom of the service-config.yml file
         def set_schedule_order(d: dict, schedule: str) -> dict:
             items = list(d.items())
             return {**dict(items[:2]), "schedule": schedule, **dict(items[2:])}
