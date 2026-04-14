@@ -286,6 +286,30 @@ class ServiceManager:
                             del env_config["network"]
                         if "observability" in env_config:
                             del env_config["observability"]
+                        if "on" in env_config:
+                            if "@" in env_config["on"]["schedule"]:
+                                rate_conversion = {
+                                    "@hourly": "rate(1 hours)",
+                                    "@daily": "rate(1 days)",
+                                    "@weekly": "0 0 * * 1",
+                                    "@monthly": "0 0 1 * *",
+                                    "@yearly": "0 * * * ?",
+                                }
+                                schedule = env_config["on"]["schedule"]
+                                env_config["schedule"] = rate_conversion.get(schedule, schedule)
+                                del env_config["on"]
+
+                            elif "*" in env_config["on"]["schedule"]:
+                                split_cron = env_config["on"]["schedule"].split()
+                                if split_cron[2] == split_cron[4]:
+                                    split_cron[4] = "?"
+                                schedule = " ".join(split_cron)
+                                env_config["schedule"] = schedule
+                                del env_config["on"]
+
+                            elif "none" in env_config["on"]["schedule"]:
+                                env_config["schedule"] = "none"
+                                del env_config["on"]
 
                 if "healthcheck" in service_manifest.get("http", {}):
                     if "interval" in service_manifest["http"]["healthcheck"]:

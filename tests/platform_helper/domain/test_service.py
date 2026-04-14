@@ -937,3 +937,35 @@ def test_migrate_scheduled_job_converts_schedule_to_eventbridge_format(
         service_config = yaml.safe_load(f)
 
     assert service_config == expected_service_config
+
+
+def test_migrate_scheduled_job_handles_overrides(
+    copilot_scheduled_job_manifest, expected_scheduled_job_config
+):
+    path = copilot_scheduled_job_manifest(
+        {
+            "on": {"schedule": "none"},
+            "environments": {
+                "dev": {"on": {"schedule": "0 23 * * *"}},
+                "staging": {"on": {"schedule": "0 0 * * *"}},
+            },
+        }
+    )
+    expected_service_config = expected_scheduled_job_config(
+        {
+            "schedule": "none",
+            "environments": {
+                "dev": {"schedule": "0 23 * * ?"},
+                "staging": {"schedule": "0 0 * * ?"},
+            },
+        }
+    )
+
+    os.chdir(path)
+    service_manager = ServiceManager()
+    service_manager.migrate_copilot_manifests()
+
+    with open(path / "services/my-scheduled-service/service-config.yml") as f:
+        service_config = yaml.safe_load(f)
+
+    assert service_config == expected_service_config
