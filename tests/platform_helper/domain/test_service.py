@@ -910,6 +910,52 @@ def test_migrate_scheduled_job_handles_schedule_being_none(
     assert service_config == expected_service_config
 
 
+def test_migrate_scheduled_job_places_schedule_key_in_correct_place(tmp_path):
+    copilot_dir = tmp_path / "copilot" / "my-scheduled-service"
+    copilot_dir.mkdir(parents=True)
+    manifest_path = copilot_dir / "manifest.yml"
+
+    manifest_path.write_text(
+        """
+name: my-scheduled-service
+type: Scheduled Job
+on:
+  schedule: none
+retries: 1
+timeout: 60m
+image:
+  location: 123456789012.dkr.ecr.eu-west-2.amazonaws.com/demodjango/my-scheduled-service:a-tag
+""".lstrip()
+    )
+
+    expected_output_dir = tmp_path / "expected_output"
+    expected_output_dir.mkdir(parents=True)
+    expected_output_path = expected_output_dir / "expected_output.yml"
+    expected_output_path.write_text(
+        """
+name: my-scheduled-service
+type: Scheduled Job
+schedule: none
+retries: 1
+timeout: 60m
+image:
+  location: 123456789012.dkr.ecr.eu-west-2.amazonaws.com/demodjango/my-scheduled-service
+""".lstrip()
+    )
+
+    os.chdir(tmp_path)
+    service_manager = ServiceManager()
+    service_manager.migrate_copilot_manifests()
+
+    with open(tmp_path / "services/my-scheduled-service/service-config.yml") as f:
+        service_config = f.read()
+
+    with open(expected_output_path) as f:
+        expected_output = f.read()
+
+    assert expected_output in service_config
+
+
 @pytest.mark.parametrize(
     "test_input,expected",
     [

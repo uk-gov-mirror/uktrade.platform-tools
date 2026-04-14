@@ -218,12 +218,16 @@ class ServiceManager:
 
         # TODO Remove this check on keywords as part of the copilot cleanup.
         # Note - get_on_key() function handles how YAML parsing may convert the *on* key into a boolean True. This ensures migration works reliably regardless of whether the key is read as "on" or True. Without this, the schedule section could be skipped/produce incorrect output. https://yaml.org/type/bool.html
-        def get_on_key(d: dict):
+        def get_on_key(d: dict) -> str | bool | None:
             if "on" in d:
                 return "on"
             if True in d:
                 return True
             return None
+
+        def set_schedule_order(d: dict, schedule: str) -> dict:
+            items = list(d.items())
+            return {**dict(items[:2]), "schedule": schedule, **dict(items[2:])}
 
         for dirname, _, filenames in os.walk("copilot"):
             if "manifest.yml" in filenames and "environments" not in dirname:
@@ -386,7 +390,9 @@ class ServiceManager:
                             "@yearly": "0 * * * ?",
                         }
                         schedule = service_manifest[on_key]["schedule"]
-                        service_manifest["schedule"] = rate_conversion.get(schedule, schedule)
+                        service_manifest = set_schedule_order(
+                            service_manifest, rate_conversion.get(schedule, schedule)
+                        )
                         del service_manifest[on_key]
 
                     elif "*" in service_manifest[on_key]["schedule"]:
@@ -394,11 +400,11 @@ class ServiceManager:
                         if split_cron[2] == split_cron[4]:
                             split_cron[4] = "?"
                         schedule = " ".join(split_cron)
-                        service_manifest["schedule"] = schedule
+                        service_manifest = set_schedule_order(service_manifest, schedule)
                         del service_manifest[on_key]
 
                     elif "none" in service_manifest[on_key]["schedule"]:
-                        service_manifest["schedule"] = "none"
+                        service_manifest = set_schedule_order(service_manifest, "none")
                         del service_manifest[on_key]
 
                 if "count" in service_manifest:
