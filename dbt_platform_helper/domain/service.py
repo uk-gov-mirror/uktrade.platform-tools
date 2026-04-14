@@ -216,6 +216,15 @@ class ServiceManager:
         service_directory = Path("services/")
         service_directory.mkdir(parents=True, exist_ok=True)
 
+        # TODO Remove this check on keywords as part of the copilot cleanup.
+        # Note - get_on_key() function handles how YAML parsing may convert the *on* key into a boolean True. This ensures migration works reliably regardless of whether the key is read as "on" or True. Without this, the schedule section could be skipped/produce incorrect output. https://yaml.org/type/bool.html
+        def get_on_key(d: dict):
+            if "on" in d:
+                return "on"
+            if True in d:
+                return True
+            return None
+
         for dirname, _, filenames in os.walk("copilot"):
             if "manifest.yml" in filenames and "environments" not in dirname:
                 copilot_manifest = self.file_provider.load(f"{dirname}/manifest.yml")
@@ -286,30 +295,33 @@ class ServiceManager:
                             del env_config["network"]
                         if "observability" in env_config:
                             del env_config["observability"]
-                        if "on" in env_config:
-                            if "@" in env_config["on"]["schedule"]:
+
+                        on_key = get_on_key(env_config)
+                        if on_key is not None:
+                            if "@" in env_config[on_key]["schedule"]:
                                 rate_conversion = {
+                                    "@hourly": "rate(1 hours)",
                                     "@hourly": "rate(1 hours)",
                                     "@daily": "rate(1 days)",
                                     "@weekly": "0 0 * * 1",
                                     "@monthly": "0 0 1 * *",
                                     "@yearly": "0 * * * ?",
                                 }
-                                schedule = env_config["on"]["schedule"]
+                                schedule = env_config[on_key]["schedule"]
                                 env_config["schedule"] = rate_conversion.get(schedule, schedule)
-                                del env_config["on"]
+                                del env_config[on_key]
 
-                            elif "*" in env_config["on"]["schedule"]:
-                                split_cron = env_config["on"]["schedule"].split()
+                            elif "*" in env_config[on_key]["schedule"]:
+                                split_cron = env_config[on_key]["schedule"].split()
                                 if split_cron[2] == split_cron[4]:
                                     split_cron[4] = "?"
                                 schedule = " ".join(split_cron)
                                 env_config["schedule"] = schedule
-                                del env_config["on"]
+                                del env_config[on_key]
 
-                            elif "none" in env_config["on"]["schedule"]:
+                            elif "none" in env_config[on_key]["schedule"]:
                                 env_config["schedule"] = "none"
-                                del env_config["on"]
+                                del env_config[on_key]
 
                 if "healthcheck" in service_manifest.get("http", {}):
                     if "interval" in service_manifest["http"]["healthcheck"]:
@@ -363,8 +375,9 @@ class ServiceManager:
                             "location"
                         ] = f"{account_id}.dkr.ecr.eu-west-2.amazonaws.com/{ecr_repo}"
 
-                if "on" in service_manifest:
-                    if "@" in service_manifest["on"]["schedule"]:
+                on_key = get_on_key(service_manifest)
+                if on_key is not None:
+                    if "@" in service_manifest[on_key]["schedule"]:
                         rate_conversion = {
                             "@hourly": "rate(1 hours)",
                             "@daily": "rate(1 days)",
@@ -372,21 +385,21 @@ class ServiceManager:
                             "@monthly": "0 0 1 * *",
                             "@yearly": "0 * * * ?",
                         }
-                        schedule = service_manifest["on"]["schedule"]
+                        schedule = service_manifest[on_key]["schedule"]
                         service_manifest["schedule"] = rate_conversion.get(schedule, schedule)
-                        del service_manifest["on"]
+                        del service_manifest[on_key]
 
-                    elif "*" in service_manifest["on"]["schedule"]:
-                        split_cron = service_manifest["on"]["schedule"].split()
+                    elif "*" in service_manifest[on_key]["schedule"]:
+                        split_cron = service_manifest[on_key]["schedule"].split()
                         if split_cron[2] == split_cron[4]:
                             split_cron[4] = "?"
                         schedule = " ".join(split_cron)
                         service_manifest["schedule"] = schedule
-                        del service_manifest["on"]
+                        del service_manifest[on_key]
 
-                    elif "none" in service_manifest["on"]["schedule"]:
+                    elif "none" in service_manifest[on_key]["schedule"]:
                         service_manifest["schedule"] = "none"
-                        del service_manifest["on"]
+                        del service_manifest[on_key]
 
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):

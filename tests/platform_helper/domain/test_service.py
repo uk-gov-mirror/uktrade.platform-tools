@@ -969,3 +969,40 @@ def test_migrate_scheduled_job_handles_overrides(
         service_config = yaml.safe_load(f)
 
     assert service_config == expected_service_config
+
+
+# In Copilot manifests the key *on* is unquoted, and when parsed by YAML it is interpreted as a bool value (True). This test ensures our code correctly handles that behaviour and still processes the schedule configuration as expected. We can remove this test once we stop using Copilot manifests syntax.
+def test_migrate_scheduled_job_handles_unquoted_on_key(tmp_path, expected_scheduled_job_config):
+    copilot_dir = tmp_path / "copilot" / "my-scheduled-service"
+    copilot_dir.mkdir(parents=True)
+    manifest_path = copilot_dir / "manifest.yml"
+
+    manifest_path.write_text(
+        """
+name: my-scheduled-service
+type: Scheduled Job
+on:
+  schedule: "@daily"
+retries: "1"
+timeout: "60m"
+image:
+  location: 123456789012.dkr.ecr.eu-west-2.amazonaws.com/demodjango/my-scheduled-service:a-tag
+environments:
+  dev:
+    on:
+      schedule: "@hourly"
+""".lstrip()
+    )
+
+    expected_service_config = expected_scheduled_job_config(
+        {"schedule": "rate(1 days)", "environments": {"dev": {"schedule": "rate(1 hours)"}}}
+    )
+
+    os.chdir(tmp_path)
+    service_manager = ServiceManager()
+    service_manager.migrate_copilot_manifests()
+
+    with open(tmp_path / "services/my-scheduled-service/service-config.yml") as f:
+        service_config = yaml.safe_load(f)
+
+    assert service_config == expected_service_config
