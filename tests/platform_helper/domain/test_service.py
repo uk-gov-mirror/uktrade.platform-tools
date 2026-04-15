@@ -870,6 +870,33 @@ def test_migrate_scheduled_job_removes_network_block(
     assert service_config == expected_service_config
 
 
+@pytest.mark.parametrize(
+    "test_input,expected",
+    [
+        ("linux/x86_64", "X86_64"),
+        ("linux/amd64", "X86_64"),
+        ("linux/arm64", "ARM64"),
+    ],
+    ids=["X86_64", "X86_64", "ARM64"],
+)
+def test_migrate_scheduled_job_converts_platform_architecture(
+    copilot_scheduled_job_manifest, expected_scheduled_job_config, test_input, expected
+):
+
+    path = copilot_scheduled_job_manifest({"platform": test_input})
+
+    expected_service_config = expected_scheduled_job_config({"platform": expected})
+
+    os.chdir(path)
+    service_manager = ServiceManager()
+    service_manager.migrate_copilot_manifests()
+
+    with open(path / "services/my-scheduled-service/service-config.yml") as f:
+        service_config = yaml.safe_load(f)
+
+    assert service_config == expected_service_config
+
+
 def test_migrate_scheduled_job_removes_image_tag(
     copilot_scheduled_job_manifest, expected_scheduled_job_config
 ):

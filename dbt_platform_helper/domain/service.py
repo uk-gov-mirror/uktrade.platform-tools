@@ -409,6 +409,14 @@ class ServiceManager:
                         service_manifest = set_schedule_order(service_manifest, "none")
                         del service_manifest[on_key]
 
+                if "platform" in service_manifest:
+                    if service_manifest["platform"] == "linux/amd64":
+                        service_manifest["platform"] = "X86_64"
+                    else:
+                        service_manifest["platform"] = (
+                            service_manifest["platform"].split("/")[1].upper()
+                        )
+
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):
                         if "cooldown" in service_manifest.get("count"):
