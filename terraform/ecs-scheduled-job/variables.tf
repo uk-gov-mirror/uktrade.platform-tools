@@ -18,6 +18,17 @@ variable "platform_extensions" {
   type = any
 }
 
+variable "custom_iam_policy_json" {
+  type        = string
+  default     = null
+  description = "Optional custom IAM policy JSON to attach to the ECS task role"
+
+  validation {
+    condition     = var.custom_iam_policy_json == null ? true : length(var.custom_iam_policy_json) <= 6144
+    error_message = "The length of the custom IAM policy exceeds the 6144 character limit for IAM managed policies."
+  }
+}
+
 variable "service_config" {
   type = object({
     name = string
