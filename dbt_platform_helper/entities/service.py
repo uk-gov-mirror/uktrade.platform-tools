@@ -406,7 +406,7 @@ class ScheduledJobEnvironmentOverride(BaseModel):
     cpu: Optional[int] = Field(default=None)
     memory: Optional[int] = Field(default=None)
     retries: Optional[int] = Field(default=None)
-    timeout: Optional[str] = Field(default=None)
+    timeout: Optional[int] = Field(default=None)
     variables: Optional[Dict[str, Union[str, int, bool]]] = Field(default=None)
     secrets: Optional[Dict[str, str]] = Field(default=None)
 
@@ -426,7 +426,7 @@ class ScheduledJobConfig(BaseModel):
     retries: Optional[int] = Field(
         description="Number of times to retry the job on failure.", default=None
     )
-    timeout: Optional[str] = Field(
+    timeout: Optional[int] = Field(
         description="Maximum duration the job may run (e.g. '1h', '30m').", default=None
     )
     image: Image = Field()
