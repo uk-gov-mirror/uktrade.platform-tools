@@ -18,7 +18,7 @@ locals {
   central_log_group_destination = var.environment == "prod" ? local.central_log_group_arns["prod"] : local.central_log_group_arns["dev"]
 
   # retries is an optional number (max attempts). Defaults to 1; set to 0 to disable the Retry block.   
-  retry_max_attempts = coalesce(var.service_config.retries, 1) # step function level
+  retry_max_attempts = coalesce(var.service_config.retries, null) # step function level
 
   # CPU architecture — defaults to X86_64; set platform = "arm64" for Graviton.                         
   cpu_architecture = try(lower(var.service_config.platform), null) == "arm64" ? "ARM64" : "X86_64"
@@ -297,5 +297,49 @@ locals {
         }
       } : {}
     )
+  )
+
+  ### State Machine
+  state_machine_definition = jsonencode(
+    {
+      Version = "1.0"
+      Comment = "Run AWS Fargate task for Scheduled Job ${local.full_service_name}"
+      StartAt = "run-fargate-task"
+      States = {
+        run-fargate-task = {
+          Type     = "Task"
+          Resource = "arn:aws:states:::ecs:runTask.sync"
+          Parameters = {
+            LaunchType      = "FARGATE"
+            PlatformVersion = "LATEST"
+            Cluster         = data.aws_ecs_cluster.cluster.id
+            TaskDefinition  = aws_ecs_task_definition.scheduled_job.arn
+            PropagateTags   = "TASK_DEFINITION"
+            "Group.$"       = "$$.Execution.Name"
+            NetworkConfiguration = {
+              AwsvpcConfiguration = {
+                Subnets = data.aws_subnets.private-subnets.ids
+              }
+              AssignPublicIp = "DISABLED"
+              SecurityGroups = "something" # TODO create a dedicated security group for Scheduled Jobs
+            }
+          }
+          Retry = local.retry_max_attempts != null ? [{
+            ErrorEquals = [
+              "States.ALL"
+            ]
+            IntervalSeconds = 10 # do we want this value configurable?
+            MaxAttempts     = local.retry_max_attempts
+            BackoffRate     = 1.5 # do we want this value configurable?
+          }] : []
+
+          # notifications state
+
+          End = true
+        }
+      }
+
+      # include logic for notications here (or space for it!)
+    }
   )
 }

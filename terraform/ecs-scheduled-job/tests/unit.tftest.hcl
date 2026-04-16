@@ -86,3 +86,13 @@ variables {
   }
 
 }
+
+
+/* 
+EventBridge test ideas:
+- schedule_expression value assertion (if none or something else)
+- state assert ENABLED or DISABLED based on config passed
+
+
+*/
+

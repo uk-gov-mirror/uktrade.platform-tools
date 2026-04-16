@@ -323,6 +323,118 @@ resource "aws_iam_role_policy_attachment" "custom_iam_policy_attachment" {
   policy_arn = aws_iam_policy.custom_iam_policy[0].arn
 }
 
+### EventBridge
+data "aws_iam_policy_document" "eventbridge_scheduler_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["scheduler.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "eventbridge_scheduler_role" {
+  name               = "${local.full_service_name}-eventbridge-scheduler"
+  assume_role_policy = data.aws_iam_policy_document.eventbridge_scheduler_assume_role.json
+  tags               = local.tags
+}
+
+resource "aws_iam_policy" "start_state_machine_execution_policy" {
+  name        = "${local.full_service_name}-state-machine-policy"
+  description = "Allows EventBridge Schedule to start Scheduled Job State Machine execution."
+  policy      = data.aws_iam_policy_document.start_state_machine_execution.json
+  tags        = local.tags
+}
+
+data "aws_iam_policy_document" "start_state_machine_execution" {
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "states:StartExecution"
+    ]
+    resources = [
+      aws_sfn_state_machine.this.arn
+    ]
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "eventbridge_scheduler_role" {
+  role       = aws_iam_role.eventbridge_scheduler_role.name
+  policy_arn = aws_iam_policy.start_state_machine_execution_policy.arn
+}
+
+### State Machine
+data "aws_iam_policy_document" "state_machine_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["states.amazonaws.com"]
+    }
+    condition {
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = ["arn:aws:states:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:stateMachine:${local.full_service_name}"]
+    }
+  }
+}
+
+resource "aws_iam_role" "state_machine_role" {
+  name               = "${local.full_service_name}-state-machine"
+  assume_role_policy = data.aws_iam_policy_document.state_machine_assume_role.json
+  tags               = local.tags
+}
+
+resource "aws_iam_policy" "start_ecs_task_policy" {
+  name        = "${local.full_service_name}-start-task-policy"
+  description = "Allows the State Machine to start an ECS task."
+  policy      = data.aws_iam_policy_document.start_ecs_task.json
+  tags        = local.tags
+}
+
+data "aws_iam_policy_document" "start_ecs_task" {
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "ecs:RunTask"
+    ]
+    resources = [
+      aws_ecs_task_definition.scheduled_job.arn
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "ecs:StopTask",
+      "ecs:DescribeTasks"
+    ]
+    resources = [
+      "arn:aws:ecs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:task/${data.aws_ecs_cluster.cluster.id}/*"
+    ]
+  }
+  statement {
+    effect = "Allow"
+    actions = [
+      "events:PutTargets",
+      "events:PutRule",
+      "events:DescribeRule"
+    ]
+    resources = [
+      "arn:aws:events:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:rule/StepFunctionsGetEventsForECSTaskRule"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "state_machine_start_ecs_task" {
+  role       = aws_iam_role.state_machine_role.name
+  policy_arn = aws_iam_policy.start_state_machine_execution_policy.arn
+}
+
 ##############################
 # S3 EXTENSIONS — SAME ACCOUNT
 ##############################
