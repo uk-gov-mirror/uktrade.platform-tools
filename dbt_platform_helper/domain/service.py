@@ -10,9 +10,6 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
-import yaml
-
-from dbt_platform_helper.constants import PLATFORM_CONFIG_FILE
 from dbt_platform_helper.constants import PLATFORM_HELPER_PACKAGE_NAME
 from dbt_platform_helper.constants import PLATFORM_HELPER_VERSION_OVERRIDE_KEY
 from dbt_platform_helper.constants import SERVICE_CONFIG_FILE
@@ -341,7 +338,6 @@ class ServiceManager:
                             if "@" in env_config[on_key]["schedule"]:
                                 rate_conversion = {
                                     "@hourly": "rate(1 hours)",
-                                    "@hourly": "rate(1 hours)",
                                     "@daily": "rate(1 days)",
                                     "@weekly": "0 0 * * 1",
                                     "@monthly": "0 0 1 * *",
@@ -353,7 +349,7 @@ class ServiceManager:
 
                             elif "*" in env_config[on_key]["schedule"]:
                                 split_cron = env_config[on_key]["schedule"].split()
-                                if split_cron[2] == split_cron[4]:
+                                if split_cron[2] == "*" and split_cron[4] == "*":
                                     split_cron[4] = "?"
                                 schedule = " ".join(split_cron)
                                 env_config["schedule"] = schedule
@@ -403,13 +399,16 @@ class ServiceManager:
                     if "build" in service_manifest["image"]:
                         del service_manifest["image"]["build"]
 
-                        with open(PLATFORM_CONFIG_FILE, "r") as f:
-                            config = yaml.safe_load(f)
+                        config = self.config_provider.get_enriched_config()
+                        application_name = config.get("application", "")
 
-                        application = config["application"]
-                        account_id = config["environments"]["*"]["accounts"]["deploy"]["id"]
+                        environments = config.get("environments", {})
+                        first_env = list(environments.values())[0] if environments else {}
+                        account_id = first_env["accounts"]["deploy"]["id"]
+
                         name = service_manifest["name"]
-                        ecr_repo = f"{application}/{name}"
+
+                        ecr_repo = f"{application_name}/{name}"
 
                         service_manifest["image"][
                             "location"
@@ -433,7 +432,7 @@ class ServiceManager:
 
                     elif "*" in service_manifest[on_key]["schedule"]:
                         split_cron = service_manifest[on_key]["schedule"].split()
-                        if split_cron[2] == split_cron[4]:
+                        if split_cron[2] == "*" and split_cron[4] == "*":
                             split_cron[4] = "?"
                         schedule = " ".join(split_cron)
                         service_manifest = set_schedule_order(service_manifest, schedule)
@@ -442,6 +441,14 @@ class ServiceManager:
                     elif "none" in service_manifest[on_key]["schedule"]:
                         service_manifest = set_schedule_order(service_manifest, "none")
                         del service_manifest[on_key]
+
+                if "platform" in service_manifest:
+                    if service_manifest["platform"] == "linux/amd64":
+                        service_manifest["platform"] = "X86_64"
+                    else:
+                        service_manifest["platform"] = (
+                            service_manifest["platform"].split("/")[1].upper()
+                        )
 
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):
