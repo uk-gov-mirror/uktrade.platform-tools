@@ -370,7 +370,7 @@ class ServiceManager:
 
                         environments = config.get("environments", {})
                         first_env = list(environments.values())[0] if environments else {}
-                        account_id = first_env.get("accounts", {}).get("deploy", {}).get("id", "")
+                        account_id = first_env["accounts"]["deploy"]["id"]
 
                         name = service_manifest["name"]
 
