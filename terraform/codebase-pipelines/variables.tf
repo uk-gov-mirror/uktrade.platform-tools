@@ -2,6 +2,11 @@ variable "application" {
   type = string
 }
 
+variable "use_github_actions" {
+  type    = bool
+  default = false
+}
+
 variable "codebase" {
   type = string
 }
@@ -42,9 +47,10 @@ variable "cache_invalidation" {
 variable "pipelines" {
   type = list(object(
     {
-      name   = string
-      branch = optional(string)
-      tag    = optional(bool)
+      name               = string
+      branch             = optional(string)
+      tag                = optional(bool)
+
       environments = list(object(
         {
           name              = string
