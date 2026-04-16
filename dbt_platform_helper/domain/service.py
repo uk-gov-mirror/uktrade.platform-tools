@@ -367,13 +367,13 @@ class ServiceManager:
 
                         config = self.config_provider.get_enriched_config()
                         application_name = config.get("application", "")
-                        
+
                         environments = config.get("environments", {})
                         first_env = list(environments.values())[0] if environments else {}
                         account_id = first_env.get("accounts", {}).get("deploy", {}).get("id", "")
-                        
+
                         name = service_manifest["name"]
-                        
+
                         ecr_repo = f"{application_name}/{name}"
 
                         service_manifest["image"][
