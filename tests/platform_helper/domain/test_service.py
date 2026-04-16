@@ -826,13 +826,23 @@ def test_migrate_scheduled_job_converts_image_build_to_location(
     config_path = path / "platform-config.yml"
     config_data = {
         "application": "demodjango",
-        "environments": {"*": {"accounts": {"deploy": {"id": "563763463626"}}}},
+        "schema_version": 1,
+        "default_versions": {"platform-helper": "15.25.0"},
+        "environments": {
+            "*": {
+                "accounts": {
+                    "deploy": {"id": "123456789012", "name": "test-account"},
+                    "dns": {"id": "011755346992", "name": "dev"},
+                }
+            },
+            "env1": {},
+        },
     }
 
     with open(config_path, "w") as f:
         yaml.safe_dump(config_data, f)
 
-    account_id = "563763463626"
+    account_id = "123456789012"
     ecr_repo = "demodjango/my-scheduled-service"
 
     expected_service_config = expected_scheduled_job_config(
