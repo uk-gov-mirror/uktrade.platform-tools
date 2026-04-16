@@ -65,3 +65,39 @@ resource "aws_vpc_security_group_egress_rule" "scheduled_job_egress" {
   ip_protocol       = "-1"
   tags              = local.tags
 }
+
+resource "aws_ecs_task_definition" "service" {
+  family                   = "${local.full_service_name}-task-def"
+  requires_compatibilities = ["FARGATE"]
+  pid_mode                 = "task"
+  region                   = data.aws_region.current.region
+  cpu                      = tostring(var.service_config.cpu)
+  memory                   = tostring(var.service_config.memory)
+  network_mode             = "awsvpc"
+
+  dynamic "ephemeral_storage" {
+    for_each = var.service_config.storage.ephemeral != null ? toset([var.service_config.storage.ephemeral]) : toset([20])
+    content {
+      size_in_gib = ephemeral_storage.ephemeral
+    }
+  }
+
+  execution_role_arn    = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.full_service_name}-task-exec"
+  container_definitions = jsonencode(local.container_definitions_list)
+  task_role_arn         = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.full_service_name}-ecs-task"
+
+  volume {
+    name      = "service-storage"
+    host_path = "/ecs/service-storage"
+  }
+
+  placement_constraints {
+    type       = "memberOf"
+    expression = "attribute:ecs.availability-zone in [us-west-2a, us-west-2b]"
+  }
+
+  runtime_platform {
+    operating_system_family = "WINDOWS_SERVER_2019_CORE"
+    cpu_architecture        = "X86_64"
+  }
+}
