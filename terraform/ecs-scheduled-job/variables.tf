@@ -67,11 +67,10 @@ variable "service_config" {
     cpu     = number
     memory  = number
     retries = optional(number)
-    timeout = optional(number)
+    timeout = optional(number) # step function level
 
-    exec       = optional(bool) #TODO review use in SJ
+    exec       = optional(bool) #TODO review use in Scheduled Jobs
     entrypoint = optional(list(string))
-    command    = optional(list(string))
     platform   = optional(string)
 
     network = optional(object({
@@ -90,9 +89,4 @@ variable "service_config" {
     variables = optional(map(any))
     secrets   = optional(map(string))
   })
-
-  # validation {
-  #   condition     = (can(tonumber(var.service_config.count)) || (can(var.service_config.count.range)))
-  #   error_message = "service_config.count must be either a number, or a map with the correct autoscaling properties defined."
-  # }
 }
