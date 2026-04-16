@@ -321,7 +321,7 @@ locals {
                 Subnets = data.aws_subnets.private-subnets.ids
               }
               AssignPublicIp = "DISABLED"
-              SecurityGroups = "something" # TODO create a dedicated security group for Scheduled Jobs
+              SecurityGroups = aws_security_group.scheduled_job_sg.id
             }
           }
           Retry = local.retry_max_attempts != null ? [{
