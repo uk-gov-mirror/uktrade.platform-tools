@@ -236,6 +236,21 @@ class ServiceManager:
             items = list(d.items())
             return {**dict(items[:2]), "schedule": schedule, **dict(items[2:])}
 
+        # TODO Remove this check on keywords as part of the copilot cleanup.
+        # Note - get_on_key() function handles how YAML parsing may convert the *on* key into a boolean True. This ensures migration works reliably regardless of whether the key is read as "on" or True. Without this, the schedule section could be skipped/produce incorrect output. https://yaml.org/type/bool.html
+        def get_on_key(d: dict) -> str | bool | None:
+            if "on" in d:
+                return "on"
+            if True in d:
+                return True
+            return None
+
+        # Regenerate manifest with the *schedule* included after the *type* field
+        # This is required to avoid sending the *schedule* field to the bottom of the service-config.yml file
+        def set_schedule_order(d: dict, schedule: str) -> dict:
+            items = list(d.items())
+            return {**dict(items[:2]), "schedule": schedule, **dict(items[2:])}
+
         for dirname, _, filenames in os.walk("copilot"):
             if "manifest.yml" in filenames and "environments" not in dirname:
                 copilot_manifest = self.file_provider.load(f"{dirname}/manifest.yml")
@@ -341,7 +356,6 @@ class ServiceManager:
                             if "@" in env_config[on_key]["schedule"]:
                                 rate_conversion = {
                                     "@hourly": "rate(1 hours)",
-                                    "@hourly": "rate(1 hours)",
                                     "@daily": "rate(1 days)",
                                     "@weekly": "0 0 * * 1",
                                     "@monthly": "0 0 1 * *",
@@ -353,7 +367,7 @@ class ServiceManager:
 
                             elif "*" in env_config[on_key]["schedule"]:
                                 split_cron = env_config[on_key]["schedule"].split()
-                                if split_cron[2] == split_cron[4]:
+                                if split_cron[2] == "*" and split_cron[4] == "*":
                                     split_cron[4] = "?"
                                 schedule = " ".join(split_cron)
                                 env_config["schedule"] = schedule
@@ -403,13 +417,16 @@ class ServiceManager:
                     if "build" in service_manifest["image"]:
                         del service_manifest["image"]["build"]
 
-                        with open(PLATFORM_CONFIG_FILE, "r") as f:
-                            config = yaml.safe_load(f)
+                        config = self.config_provider.get_enriched_config()
+                        application_name = config.get("application", "")
 
-                        application = config["application"]
-                        account_id = config["environments"]["*"]["accounts"]["deploy"]["id"]
+                        environments = config.get("environments", {})
+                        first_env = list(environments.values())[0] if environments else {}
+                        account_id = first_env["accounts"]["deploy"]["id"]
+
                         name = service_manifest["name"]
-                        ecr_repo = f"{application}/{name}"
+
+                        ecr_repo = f"{application_name}/{name}"
 
                         service_manifest["image"][
                             "location"
@@ -433,7 +450,7 @@ class ServiceManager:
 
                     elif "*" in service_manifest[on_key]["schedule"]:
                         split_cron = service_manifest[on_key]["schedule"].split()
-                        if split_cron[2] == split_cron[4]:
+                        if split_cron[2] == "*" and split_cron[4] == "*":
                             split_cron[4] = "?"
                         schedule = " ".join(split_cron)
                         service_manifest = set_schedule_order(service_manifest, schedule)
@@ -442,6 +459,14 @@ class ServiceManager:
                     elif "none" in service_manifest[on_key]["schedule"]:
                         service_manifest = set_schedule_order(service_manifest, "none")
                         del service_manifest[on_key]
+
+                if "platform" in service_manifest:
+                    if service_manifest["platform"] == "linux/amd64":
+                        service_manifest["platform"] = "X86_64"
+                    else:
+                        service_manifest["platform"] = (
+                            service_manifest["platform"].split("/")[1].upper()
+                        )
 
                 if "count" in service_manifest:
                     if not isinstance(service_manifest.get("count"), int):
