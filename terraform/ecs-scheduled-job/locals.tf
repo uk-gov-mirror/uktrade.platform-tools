@@ -18,7 +18,7 @@ locals {
   central_log_group_destination = var.environment == "prod" ? local.central_log_group_arns["prod"] : local.central_log_group_arns["dev"]
 
   # retries is an optional number (max attempts). Defaults to 1; set to 0 to disable the Retry block.   
-  retry_max_attempts = coalesce(var.service_config.retries, 1)
+  retry_max_attempts = coalesce(var.service_config.retries, 1) # step function level
 
   # CPU architecture — defaults to X86_64; set platform = "arm64" for Graviton.                         
   cpu_architecture = try(lower(var.service_config.platform), null) == "arm64" ? "ARM64" : "X86_64"
@@ -144,25 +144,12 @@ locals {
     }
   }
 
-  # REMOVE
-  # main_port_mappings = (
-  #   try(var.service_config.image.port, null) != null
-  #   ) ? [
-  #   merge(
-  #     { containerPort = var.service_config.image.port, protocol = "tcp" },
-  #     (
-  #       var.service_config.name
-  #     ) ? { name = "target" } : {}
-  #   )
-  # ] : []
-
   depends_on_map = {
     for k, v in coalesce(try(var.service_config.image.depends_on, {}), {}) :
     k => upper(v)
   }
 
-  # REMOVE
-  # writable_directories = coalesce(try(var.service_config.storage.writable_directories, null), [])
+  writable_directories = coalesce(try(var.service_config.storage.writable_directories, null), [])
 
   main_container = merge(
     local.default_container_config,
@@ -178,20 +165,15 @@ locals {
         for k, v in coalesce(var.service_config.secrets, {}) :
         { name = k, valueFrom = v }
       ]
-      # REMOVE
-      # readonlyRootFilesystem = var.service_config.storage.readonly_fs
-      readonlyRootFilesystem = false
-
-      # REMOVE
-      # mountPoints = concat([
-      #   { sourceVolume = "path-tmp", containerPath = "/tmp" }
-      #   ], [
-      #   for path in local.writable_directories : {
-      #     sourceVolume  = "path${replace(path, "/", "-")}"
-      #     containerPath = path
-      #   }
-      # ])
-      mountPoints = [{ sourceVolume = "path-tmp", containerPath = "/tmp" }]
+      readonlyRootFilesystem = var.service_config.storage.readonly_fs
+      mountPoints = concat([
+        { sourceVolume = "path-tmp", containerPath = "/tmp" }
+        ], [
+        for path in local.writable_directories : {
+          sourceVolume  = "path${replace(path, "/", "-")}"
+          containerPath = path
+        }
+      ])
 
       # Ensure main container always starts last
       dependsOn = concat([
@@ -220,41 +202,27 @@ locals {
         startPeriod = var.service_config.image.healthcheck.start_period
       }
     } : {},
-    # REMOVE
-    # portMappings           = local.main_port_mappings
+
     try(var.service_config.image.port, null) != null ? { portMappings = [{ containerPort = var.service_config.image.port, protocol = "tcp" }] } : {},
   )
-
-  # REMOVE
-  # Intialises /tmp as writable before the main container starts
-  # permissions_container = merge(local.default_container_config, {
-  #   name      = "writable_directories_permission"
-  #   image     = "public.ecr.aws/docker/library/alpine:latest"
-  #   essential = false
-  #   command = [
-  #     "/bin/sh",
-  #     "-c",
-  #     "chmod -R a+w /tmp ${length(local.writable_directories) > 0 ? "&& chown -R 1002:1000 ${join(" ", local.writable_directories)}" : ""}"
-  #   ]
-  #   mountPoints = concat([
-  #     { sourceVolume = "path-tmp", readOnly = false, containerPath = "/tmp" }
-  #     ], [
-  #     for path in local.writable_directories :
-  #     { sourceVolume = "path${replace(path, "/", "-")}", readOnly = false, containerPath = path }
-  #   ])
-  # })
 
   # Intialises /tmp as writable before the main container starts
   permissions_container = merge(local.default_container_config, {
     name      = "writable_directories_permission"
     image     = "public.ecr.aws/docker/library/alpine:latest"
     essential = false
-    command   = ["/bin/sh", "-c", "chmod -R a+w /tmp"]
-    mountPoints = [
-      { sourceVolume = "path-tmp", readOnly = false, containerPath = "/tmp" }
+    command = [
+      "/bin/sh",
+      "-c",
+      "chmod -R a+w /tmp ${length(local.writable_directories) > 0 ? "&& chown -R 1002:1000 ${join(" ", local.writable_directories)}" : ""}"
     ]
+    mountPoints = concat([
+      { sourceVolume = "path-tmp", readOnly = false, containerPath = "/tmp" }
+      ], [
+      for path in local.writable_directories :
+      { sourceVolume = "path${replace(path, "/", "-")}", readOnly = false, containerPath = path }
+    ])
   })
-
 
 
   sidecar_containers = [
@@ -271,18 +239,6 @@ locals {
         secrets = [
           for k, v in coalesce(sidecar.secrets, {}) : { name = k, valueFrom = v }
         ]
-        # portMappings = sidecar.port != null ? [
-        #   merge(
-        #     { containerPort = sidecar.port, protocol = "tcp" },
-        #     # Add Service Connect target port name when this sidecar is the declared target
-        #     (
-        #       var.service_config.type == "Load Balanced Web Service" &&
-        #       local.target_container == sidecar_name
-        #     )
-        #     ? { name = "target" }
-        #     : {}
-        #   )
-        # ] : []
 
         portMappings = sidecar.port != null ? [
           { containerPort = sidecar.port, protocol = "tcp" }
@@ -308,10 +264,10 @@ locals {
     [local.permissions_container]
   )
 
-  # writable_volumes = [
-  #   for path in local.writable_directories :
-  #   { name = "path${replace(path, "/", "-")}", host = {} }
-  # ]
+  writable_volumes = [
+    for path in local.writable_directories :
+    { name = "path${replace(path, "/", "-")}", host = {} }
+  ]
 
   task_definition_json = jsonencode(
     merge(
@@ -321,12 +277,13 @@ locals {
         executionRoleArn        = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${full_service_name}-task-exec"
         networkMode             = "awsvpc"
         containerDefinitions    = local.container_definitions_list
-        volumes                 = [{ "name" : "path-tmp", "host" : {} }]
+        volumes                 = concat([{ "name" : "path-tmp", "host" : {} }], local.writable_volumes)
         placementConstraints    = []
         requiresCompatibilities = ["FARGATE"]
         cpu                     = tostring(var.service_config.cpu)
         memory                  = tostring(var.service_config.memory)
         pidMode                 = "task"
+        cpuArchitecture         = local.cpu_architecture
         tags = [
           { "key" : "application", "value" : var.application },
           { "key" : "environment", "value" : var.environment },
@@ -334,7 +291,6 @@ locals {
           { "key" : "managed-by", "value" : "DBT Platform" },
         ]
       },
-      # REMOVE ???
       var.service_config.storage.ephemeral != null ? {
         ephemeralStorage = {
           sizeInGiB = var.service_config.storage.ephemeral
@@ -342,58 +298,4 @@ locals {
       } : {}
     )
   )
-
-  ##################
-  # ECS AUTO-SCALING
-  ##################
-
-  # Note: Autoscaling is always be enabled. When not in use, 'count_min' and 'count_max' have the same value.
-
-  count_range = try(split("-", var.service_config.count.range), null)
-
-  count_min = try(
-    tonumber(local.count_range[0]),    # preferred (if autoscaling is enabled), otherwise will error out on null value
-    tonumber(var.service_config.count) # default (without autoscaling)
-  )
-
-  count_max = try(
-    tonumber(local.count_range[1]),    # preferred (if autoscaling is enabled), otherwise will error out on null value
-    tonumber(var.service_config.count) # default (without autoscaling)
-  )
-
-  # Default cooldown values. Can be overridden. Fallback set to 60 seconds. Autoscaling is always enabled, even when 'count: 1'.
-  default_cool_in  = try(var.service_config.count.cooldown.in, 60)
-  default_cool_out = try(var.service_config.count.cooldown.out, 60)
-
-  # Scheduled Actions
-
-  scheduled_actions = {
-    for idx, schedule in try(var.service_config.count.schedules, []) :
-    "${local.full_service_name}-schedule-${idx}" => {
-      schedule = schedule.schedule
-      min      = tonumber(split("-", schedule.range)[0])
-      max      = tonumber(split("-", schedule.range)[1])
-    }
-  }
-  # CPU properties
-  cpu_value    = try(var.service_config.count.cpu_percentage.value, var.service_config.count.cpu_percentage, null)
-  cpu_cool_in  = try(var.service_config.count.cpu_percentage.cooldown.in, local.default_cool_in)
-  cpu_cool_out = try(var.service_config.count.cpu_percentage.cooldown.out, local.default_cool_out)
-
-  # Memory properties
-  mem_value    = try(var.service_config.count.memory_percentage.value, var.service_config.count.memory_percentage, null)
-  mem_cool_in  = try(var.service_config.count.memory_percentage.cooldown.in, local.default_cool_in)
-  mem_cool_out = try(var.service_config.count.memory_percentage.cooldown.out, local.default_cool_out)
-
-  # Requests properties
-  req_value    = try(var.service_config.count.requests_per_minute.value, var.service_config.count.requests_per_minute, null)
-  req_cool_in  = try(var.service_config.count.requests_per_minute.cooldown.in, local.default_cool_in)
-  req_cool_out = try(var.service_config.count.requests_per_minute.cooldown.out, local.default_cool_out)
-
-  # Only create 'aws_appautoscaling_policy' resources when required
-  enable_cpu = local.cpu_value != null
-  enable_mem = local.mem_value != null
-  enable_req = local.req_value != null && local.web_service_required == 1
-
-  service_deployment_mode = lookup(var.env_config[var.environment], "service-deployment-mode", "copilot")
 }
