@@ -539,18 +539,6 @@ data "aws_iam_policy_document" "assume_cache_invalidation_role" {
   }
 }
 
-data "aws_iam_policy_document" "invalidate_cache_assume_role" {
-  for_each = toset(local.cache_invalidation_enabled ? [""] : [])
-  statement {
-    sid    = "AllowDNSAccountAccess"
-    effect = "Allow"
-    actions = [
-      "sts:AssumeRole",
-    ]
-    resources = local.cache_invalidation_assumed_roles
-  }
-}
-
 resource "aws_iam_role" "invalidate_cache" {
   for_each           = toset(local.cache_invalidation_enabled ? [""] : [])
   name               = "${var.application}-${var.codebase}-invalidate-cache"
@@ -600,7 +588,7 @@ resource "aws_iam_role_policy" "dns_account_assume_role_for_cache_invalidation" 
   for_each = toset(local.cache_invalidation_enabled ? [""] : [])
   name     = "${var.application}-${var.codebase}-dns-account-assume-role"
   role     = aws_iam_role.invalidate_cache[each.key].name
-  policy   = data.aws_iam_policy_document.invalidate_cache_assume_role[each.key].json
+  policy   = data.aws_iam_policy_document.dns_account_assume_role[each.key].json
 }
 
 resource "aws_iam_role" "update_alb_rules" {
