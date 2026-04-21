@@ -267,7 +267,7 @@ data "aws_iam_policy_document" "dns_account_assume_role" {
     actions = [
       "sts:AssumeRole"
     ]
-    resources = local.new_dns_account_assumed_roles
+    resources = local.dns_account_assumed_roles
   }
 }
 

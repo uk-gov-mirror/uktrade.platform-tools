@@ -547,7 +547,7 @@ data "aws_iam_policy_document" "invalidate_cache_assume_role" {
     actions = [
       "sts:AssumeRole",
     ]
-    resources = local.new_cache_invalidation_assumed_roles
+    resources = local.cache_invalidation_assumed_roles
   }
 }
 

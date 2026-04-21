@@ -28,7 +28,7 @@ locals {
       { "name" = env_obj.name }
     )
   ]
-
+  environment_name = [for env in local.var.environment_config : env.name]
 
   triggers_another_pipeline         = var.pipeline_to_trigger != null
   triggered_pipeline_account_name   = local.triggers_another_pipeline ? var.all_pipelines[var.pipeline_to_trigger].account : null
@@ -140,8 +140,7 @@ locals {
   )
 
   dns_ids                   = tolist(toset(flatten([for stage in local.all_stages : lookup(stage, "accounts", null) != null ? [stage.accounts.dns.id] : []])))
-  dns_account_assumed_roles = [for id in local.dns_ids : "arn:aws:iam::${id}:role/environment-pipeline-assumed-role"]
-  new_dns_account_assumed_roles = [for id in local.dns_ids : "arn:aws:iam::${id}:role/demodjango-ben-pipeline-deployment-role"]
+  dns_account_assumed_roles = [for id in local.dns_ids : "arn:aws:iam::${id}:role/${var.application}-${local.environment_name}-pipeline-deployment-role"]
 
   # Merge in the stage specific config from the stage_config.yml file:
   stages = [for stage in local.all_stages : merge(stage, local.stage_config[stage["type"]])]
