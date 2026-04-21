@@ -507,17 +507,17 @@ data "aws_iam_policy_document" "codestar_access_for_codebase_pipeline" {
   }
 }
 
-# data "aws_iam_policy_document" "dns_account_assume_role" {
-#   for_each = toset(local.cache_invalidation_enabled ? [""] : [])
-#   statement {
-#     sid    = "AllowDNSAccountAccess"
-#     effect = "Allow"
-#     actions = [
-#       "sts:AssumeRole",
-#     ]
-#     resources = local.new_cache_invalidation_assumed_roles
-#   }
-# }
+data "aws_iam_policy_document" "dns_account_assume_role" {
+  for_each = toset(local.cache_invalidation_enabled ? [""] : [])
+  statement {
+    sid    = "AllowDNSAccountAccess"
+    effect = "Allow"
+    actions = [
+      "sts:AssumeRole",
+    ]
+    resources = local.cache_invalidation_assumed_roles
+  }
+}
 
 data "aws_iam_policy_document" "assume_cache_invalidation_role" {
   for_each = toset(local.cache_invalidation_enabled ? [""] : [])
