@@ -152,9 +152,9 @@ class TerraformManifestProvider:
             terraform,
             platform_helper_version,
             env,
+            deploy_repository,
             module_source_override,
             pinned_version,
-            deploy_repository,
         )
         self._add_moved(terraform, platform_config)
         self._ensure_no_hcl_manifest_file(env_dir)
