@@ -11,7 +11,7 @@ data "aws_ssm_parameter" "slack_token" {
 data "aws_ssm_parameters_by_path" "cdn_domain_list" {
   provider = aws.domain-cdn
 
-  path      = "/platform/paas-migration-docs/dev/cdn_domains_list"
+  path      = "/platform/${var.application}/${var.environment}/cdn_domains_list"
   recursive = false
 }
 
