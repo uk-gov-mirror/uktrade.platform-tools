@@ -85,18 +85,17 @@ resource "aws_ecs_task_definition" "service" {
   container_definitions = jsonencode(local.container_definitions_list)
   task_role_arn         = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${local.full_service_name}-ecs-task"
 
-  volume {
-    name      = "service-storage"
-    host_path = "/ecs/service-storage"
-  }
-
-  placement_constraints {
-    type       = "memberOf"
-    expression = "attribute:ecs.availability-zone in [us-west-2a, us-west-2b]"
+  dynamic "volume" {
+    for_each = local.volumes
+    content {
+      name      = volume.name
+      host_path = volume.host
+    }
   }
 
   runtime_platform {
-    operating_system_family = "WINDOWS_SERVER_2019_CORE"
-    cpu_architecture        = "X86_64"
+    cpu_architecture = local.cpu_architecture
   }
+
+  tags = local.tags
 }

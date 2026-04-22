@@ -269,35 +269,7 @@ locals {
     { name = "path${replace(path, "/", "-")}", host = {} }
   ]
 
-  task_definition_json = jsonencode(
-    merge(
-      {
-        family                  = "${local.full_service_name}-task-def"
-        taskRoleArn             = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${full_service_name}-ecs-task"
-        executionRoleArn        = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/${full_service_name}-task-exec"
-        networkMode             = "awsvpc"
-        containerDefinitions    = local.container_definitions_list
-        volumes                 = concat([{ "name" : "path-tmp", "host" : {} }], local.writable_volumes)
-        placementConstraints    = []
-        requiresCompatibilities = ["FARGATE"]
-        cpu                     = tostring(var.service_config.cpu)
-        memory                  = tostring(var.service_config.memory)
-        pidMode                 = "task"
-        cpuArchitecture         = local.cpu_architecture
-        tags = [
-          { "key" : "application", "value" : var.application },
-          { "key" : "environment", "value" : var.environment },
-          { "key" : "service", "value" : var.service_config.name },
-          { "key" : "managed-by", "value" : "DBT Platform" },
-        ]
-      },
-      var.service_config.storage.ephemeral != null ? {
-        ephemeralStorage = {
-          sizeInGiB = var.service_config.storage.ephemeral
-        }
-      } : {}
-    )
-  )
+  volumes = concat([{ "name" : "path-tmp", "host" : {} }], local.writable_volumes)
 
   ### State Machine
   state_machine_definition = jsonencode(
