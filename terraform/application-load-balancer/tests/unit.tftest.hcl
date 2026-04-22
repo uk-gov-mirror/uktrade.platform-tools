@@ -1169,7 +1169,7 @@ run "dummy_listener_rule_manager" {
   }
 }
 
-run "passes_when_domains_match" {
+run "cdn_domain_list_precondition_passes_when_domains_match" {
   command = plan
 
   variables {
@@ -1180,4 +1180,21 @@ run "passes_when_domains_match" {
       }
     }
   }
+}
+
+run "cdn_domain_list_precondition_fails_when_domains_do_not_match" {
+  command = plan
+
+  variables {
+    config = {
+      cdn_domains_list = {
+        "web.dev.my-application.uktrade.digital" : ["internal.web", "my-application.uktrade.digital", "disable_cdn"],
+        "frontend.dev.my-application.uktrade.digital" : ["internal.frontend", "my-application.uktrade.digital", "disable_cdn"]
+      }
+    }
+  }
+
+  expect_failures = [
+    null_resource.validate_cdn_domains
+  ]
 }
