@@ -22,11 +22,63 @@ override_data {
   }
 }
 
+override_data {
+  target = data.aws_iam_policy_document.assume_role
+  values = {
+    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
+  }
+}
+
+override_data {
+  target = data.aws_iam_policy_document.execute_command
+  values = {
+    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
+  }
+}
+
+override_data {
+  target = data.aws_iam_policy_document.appconfig
+  values = {
+    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
+  }
+}
+
+override_data {
+  target = data.aws_iam_policy_document.eventbridge_scheduler_assume_role
+  values = {
+    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
+  }
+}
+
+override_data {
+  target = data.aws_iam_policy_document.state_machine_assume_role
+  values = {
+    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
+  }
+}
+
+override_data {
+  target = data.aws_iam_policy_document.service_logs
+  values = {
+    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
+  }
+}
+
+override_data {
+  target = data.aws_ssm_parameter.log-destination-arn
+  values = {
+    value = "{\"dev\":\"arn:aws:logs:eu-west-2:001122334455:log-group:/central/dev\",\"prod\":\"arn:aws:logs:eu-west-2:001122334455:log-group:/central/prod\"}"
+  }
+}
+
+
 variables {
   application         = "demodjango"
   environment         = "dev"
   platform_extensions = {} # Empty placeholder to pass validate - declared further down in individual tests
-
+  
+  name = "db-dump"
+  
   env_config = {
     dev = {
       accounts = {
@@ -58,6 +110,14 @@ variables {
     memory = 512
     count  = 1
     exec   = true
+    essential = true
+
+    schedule = "none"
+
+    storage = {
+      readonly_fs          = false
+      writable_directories = []
+    }
 
     # sidecars = {
     #   nginx = {
@@ -90,9 +150,78 @@ variables {
 
 /* 
 EventBridge test ideas:
-- schedule_expression value assertion (if none or something else)
-- state assert ENABLED or DISABLED based on config passed
+- state machine target is correct
+- IAM role is correct
+*/
 
+run "test_none_schedule_expression_is_disabled" {
+  command = plan
+
+  assert {
+    condition     = aws_scheduler_schedule.this.state == "DISABLED" 
+    error_message = "Should be 'DISABLED'"
+  }
+}
+
+run "test_rate_schedule_expression_is_enabled" {
+  command = plan
+
+  variables {
+    service_config = merge(var.service_config, {schedule = "rate(5 minutes)"})
+  }
+
+  assert {
+    condition     = aws_scheduler_schedule.this.state == "ENABLED" 
+    error_message = "Should be 'ENABLED'"
+  }
+}
+
+run "test_cron_schedule_expression_is_enabled" {
+  command = plan
+
+  variables {
+    service_config = merge(var.service_config, {schedule = "5 * * * ?"})
+  }
+
+  assert {
+    condition     = aws_scheduler_schedule.this.state == "ENABLED" 
+    error_message = "Should be 'ENABLED'"
+  }
+}
+
+run "test_none_schedule_expression_defaults_to_rate_5_minutes" {
+  command = plan
+
+  assert {
+    condition     = aws_scheduler_schedule.this.schedule_expression == "rate(5 minutes)" 
+    error_message = "Should be 'rate(5 minutes)'"
+  }
+}
+
+# Is this helpful? (Since we are already checking if "none" results in rate(5 minutes))
+run "test_cron_schedule_expression_gives_expected_cron" {
+  command = plan
+
+  variables {
+    service_config = merge(var.service_config, {schedule = "5 * * * ?"})
+  }
+
+  assert {
+    condition     = aws_scheduler_schedule.this.schedule_expression == "5 * * * ?"
+    error_message = "Should be '5 * * * ?'"
+  }
+}
+
+/*
+State Machine tests:
+- retries set to null result in no 'Retry' block
 
 */
 
+/* 
+ECS tests:
+- platform (cpu architecture)
+- ephemeral storage
+- volumes
+
+ */

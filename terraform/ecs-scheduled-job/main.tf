@@ -36,8 +36,6 @@ resource "aws_scheduler_schedule" "this" {
 }
 
 ### State Machine
-# ...
-
 resource "aws_sfn_state_machine" "this" {
   name     = local.full_service_name
   role_arn = aws_iam_role.state_machine_role.arn
@@ -45,6 +43,8 @@ resource "aws_sfn_state_machine" "this" {
   definition = local.state_machine_definition
 }
 
+
+### ECS
 data "aws_ecs_cluster" "cluster" {
   cluster_name = "${var.application}-${var.environment}-cluster"
 }
