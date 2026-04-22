@@ -246,4 +246,7 @@ ECS tests:
 - ephemeral storage
 - volumes
 
+More generally - how do we handle testing shared functionality in both ecs-service and ecs-scheduled-job?
+- Duplicating all tests that are relevant from ecs-service to ecs-scheduled-job?
+- Splitting out shared module functionality into a 3rd module, and then having ecs-service and ecs-scheduled-job call the 3rd module? The 3rd module owns all the shared tests 
  */
