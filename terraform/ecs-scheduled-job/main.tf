@@ -16,10 +16,9 @@ resource "aws_scheduler_schedule" "this" {
     mode = "OFF"
   }
 
-  # to be the State Machine
   target {
     arn      = aws_sfn_state_machine.this.arn
-    role_arn = aws_iam_role.example.arn
+    role_arn = aws_iam_role.eventbridge_scheduler_role.arn
   }
 
   # Optional
