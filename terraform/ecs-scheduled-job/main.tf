@@ -75,9 +75,9 @@ resource "aws_ecs_task_definition" "service" {
   network_mode             = "awsvpc"
 
   dynamic "ephemeral_storage" {
-    for_each = var.service_config.storage.ephemeral != null ? toset([var.service_config.storage.ephemeral]) : toset([20])
+    for_each = var.service_config.storage.ephemeral != null ? toset([var.service_config.storage.ephemeral]) : toset([])
     content {
-      size_in_gib = ephemeral_storage.ephemeral
+      size_in_gib = ephemeral_storage.value
     }
   }
 
@@ -88,8 +88,8 @@ resource "aws_ecs_task_definition" "service" {
   dynamic "volume" {
     for_each = local.volumes
     content {
-      name      = volume.name
-      host_path = volume.host
+      name      = volume.value["name"]
+      host_path = volume.value["host"]
     }
   }
 

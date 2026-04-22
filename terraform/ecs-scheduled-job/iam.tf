@@ -404,7 +404,7 @@ data "aws_iam_policy_document" "start_ecs_task" {
       "ecs:RunTask"
     ]
     resources = [
-      aws_ecs_task_definition.scheduled_job.arn
+      aws_ecs_task_definition.service.arn
     ]
   }
   statement {

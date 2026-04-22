@@ -72,6 +72,7 @@ variable "service_config" {
     exec       = optional(bool) #TODO review use in Scheduled Jobs
     entrypoint = optional(list(string))
     platform   = optional(string)
+    essential  = optional(bool)
 
     network = optional(object({
       connect = optional(bool)

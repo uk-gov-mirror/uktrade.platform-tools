@@ -18,7 +18,7 @@ locals {
   central_log_group_destination = var.environment == "prod" ? local.central_log_group_arns["prod"] : local.central_log_group_arns["dev"]
 
   # retries is an optional number (max attempts). Defaults to 1; set to 0 to disable the Retry block.   
-  retry_max_attempts = coalesce(var.service_config.retries, null) # step function level
+  retry_max_attempts = lookup(var.service_config, "retries", null) # step function level
 
   # CPU architecture — defaults to X86_64; set platform = "arm64" for Graviton.                         
   cpu_architecture = try(lower(var.service_config.platform), null) == "arm64" ? "ARM64" : "X86_64"
@@ -269,7 +269,7 @@ locals {
     { name = "path${replace(path, "/", "-")}", host = {} }
   ]
 
-  volumes = concat([{ "name" : "path-tmp", "host" : {} }], local.writable_volumes)
+  volumes = concat([{ "name" : "path-tmp", "host" : "{}" }], local.writable_volumes)
 
   ### State Machine
   state_machine_definition = jsonencode(
@@ -285,7 +285,7 @@ locals {
             LaunchType      = "FARGATE"
             PlatformVersion = "LATEST"
             Cluster         = data.aws_ecs_cluster.cluster.id
-            TaskDefinition  = aws_ecs_task_definition.scheduled_job.arn
+            TaskDefinition  = aws_ecs_task_definition.service.arn
             PropagateTags   = "TASK_DEFINITION"
             "Group.$"       = "$$.Execution.Name"
             NetworkConfiguration = {
