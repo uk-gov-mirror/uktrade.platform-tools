@@ -19,6 +19,7 @@ locals {
   ])
 
   tagged_pipeline = length([for pipeline in var.pipelines : true if lookup(pipeline, "tag", null) == true]) > 0
+  environment_name = distinct(flatten([for pipeline in var.pipelines : [for env in pipeline.environments : env.name]]))
 
   base_env_config = {
     for name, config in var.env_config : name => {
@@ -33,7 +34,7 @@ locals {
 
   dns_account_ids = distinct([for env in local.base_env_config : env.dns_account])
 
-  cache_invalidation_assumed_roles = [for id in local.dns_account_ids : "arn:aws:iam::${id}:role/${var.application}-${var.codebase}-pipeline-deployment-role"]
+  cache_invalidation_assumed_roles = [for id in local.dns_account_ids : "arn:aws:iam::${id}:role/${var.application}-${local.environment_name}-pipeline-deployment-role"]
 
   environments_requiring_cache_invalidation = distinct([for d in try(values(var.cache_invalidation.domains), []) : d.environment])
 
