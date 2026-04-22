@@ -25,7 +25,7 @@ module "database-copy-pipeline" {
   application       = var.application
   environment       = var.environment
   database_name     = var.name
-  deploy_repository = local.deploy_repository
+  deploy_repository = var.deploy_repository
   task              = local.pipeline_tasks[count.index]
   pinned_version    = var.pinned_version
 }
