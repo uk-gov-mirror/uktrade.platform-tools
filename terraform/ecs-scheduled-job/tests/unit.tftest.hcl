@@ -76,9 +76,9 @@ variables {
   application         = "demodjango"
   environment         = "dev"
   platform_extensions = {} # Empty placeholder to pass validate - declared further down in individual tests
-  
+
   name = "db-dump"
-  
+
   env_config = {
     dev = {
       accounts = {
@@ -106,10 +106,10 @@ variables {
       port     = 8080
     }
 
-    cpu    = 256
-    memory = 512
-    count  = 1
-    exec   = true
+    cpu       = 256
+    memory    = 512
+    count     = 1
+    exec      = true
     essential = true
 
     schedule = "none"
@@ -158,7 +158,7 @@ run "test_none_schedule_expression_is_disabled" {
   command = plan
 
   assert {
-    condition     = aws_scheduler_schedule.this.state == "DISABLED" 
+    condition     = aws_scheduler_schedule.this.state == "DISABLED"
     error_message = "Should be 'DISABLED'"
   }
 }
@@ -167,11 +167,11 @@ run "test_rate_schedule_expression_is_enabled" {
   command = plan
 
   variables {
-    service_config = merge(var.service_config, {schedule = "rate(5 minutes)"})
+    service_config = merge(var.service_config, { schedule = "rate(5 minutes)" })
   }
 
   assert {
-    condition     = aws_scheduler_schedule.this.state == "ENABLED" 
+    condition     = aws_scheduler_schedule.this.state == "ENABLED"
     error_message = "Should be 'ENABLED'"
   }
 }
@@ -180,11 +180,11 @@ run "test_cron_schedule_expression_is_enabled" {
   command = plan
 
   variables {
-    service_config = merge(var.service_config, {schedule = "5 * * * ?"})
+    service_config = merge(var.service_config, { schedule = "5 * * * ?" })
   }
 
   assert {
-    condition     = aws_scheduler_schedule.this.state == "ENABLED" 
+    condition     = aws_scheduler_schedule.this.state == "ENABLED"
     error_message = "Should be 'ENABLED'"
   }
 }
@@ -193,17 +193,17 @@ run "test_none_schedule_expression_defaults_to_rate_5_minutes" {
   command = plan
 
   assert {
-    condition     = aws_scheduler_schedule.this.schedule_expression == "rate(5 minutes)" 
+    condition     = aws_scheduler_schedule.this.schedule_expression == "rate(5 minutes)"
     error_message = "Should be 'rate(5 minutes)'"
   }
 }
 
-# Is this helpful? (Since we are already checking if "none" results in rate(5 minutes))
+# Is this a useful test? (Since we are already checking if "none" results in rate(5 minutes))
 run "test_cron_schedule_expression_gives_expected_cron" {
   command = plan
 
   variables {
-    service_config = merge(var.service_config, {schedule = "5 * * * ?"})
+    service_config = merge(var.service_config, { schedule = "5 * * * ?" })
   }
 
   assert {
@@ -215,8 +215,30 @@ run "test_cron_schedule_expression_gives_expected_cron" {
 /*
 State Machine tests:
 - retries set to null result in no 'Retry' block
-
 */
+run "test_state_machine_definition_has_no_retry" {
+  command = plan
+
+  assert {
+    condition     = length(local.state_machine_definition.States.run-fargate-task.Retry) == 0
+    error_message = "Should have a length of '0'"
+  }
+}
+
+# Is this a useful test? (Since we are already checking if Retry value is empty)
+run "test_state_machine_definition_has_expected_retry" {
+  command = plan
+
+  variables {
+    service_config = merge(var.service_config, { retries = 1 })
+  }
+
+  assert {
+    condition     = local.state_machine_definition.States.run-fargate-task.Retry[0].MaxAttempts == 1
+    error_message = "Should have MaxAttempts as '1'"
+  }
+}
+
 
 /* 
 ECS tests:

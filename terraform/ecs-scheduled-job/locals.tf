@@ -272,46 +272,44 @@ locals {
   volumes = concat([{ "name" : "path-tmp", "host" : "{}" }], local.writable_volumes)
 
   ### State Machine
-  state_machine_definition = jsonencode(
-    {
-      Version = "1.0"
-      Comment = "Run AWS Fargate task for Scheduled Job ${local.full_service_name}"
-      StartAt = "run-fargate-task"
-      States = {
-        run-fargate-task = {
-          Type     = "Task"
-          Resource = "arn:aws:states:::ecs:runTask.sync"
-          Parameters = {
-            LaunchType      = "FARGATE"
-            PlatformVersion = "LATEST"
-            Cluster         = data.aws_ecs_cluster.cluster.id
-            TaskDefinition  = aws_ecs_task_definition.service.arn
-            PropagateTags   = "TASK_DEFINITION"
-            "Group.$"       = "$$.Execution.Name"
-            NetworkConfiguration = {
-              AwsvpcConfiguration = {
-                Subnets = data.aws_subnets.private-subnets.ids
-              }
-              AssignPublicIp = "DISABLED"
-              SecurityGroups = aws_security_group.scheduled_job_sg.id
+  state_machine_definition = {
+    Version = "1.0"
+    Comment = "Run AWS Fargate task for Scheduled Job ${local.full_service_name}"
+    StartAt = "run-fargate-task"
+    States = {
+      run-fargate-task = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::ecs:runTask.sync"
+        Parameters = {
+          LaunchType      = "FARGATE"
+          PlatformVersion = "LATEST"
+          Cluster         = data.aws_ecs_cluster.cluster.id
+          TaskDefinition  = aws_ecs_task_definition.service.arn
+          PropagateTags   = "TASK_DEFINITION"
+          "Group.$"       = "$$.Execution.Name"
+          NetworkConfiguration = {
+            AwsvpcConfiguration = {
+              Subnets = data.aws_subnets.private-subnets.ids
             }
+            AssignPublicIp = "DISABLED"
+            SecurityGroups = aws_security_group.scheduled_job_sg.id
           }
-          Retry = local.retry_max_attempts != null ? [{
-            ErrorEquals = [
-              "States.ALL"
-            ]
-            IntervalSeconds = 10 # do we want this value configurable?
-            MaxAttempts     = local.retry_max_attempts
-            BackoffRate     = 1.5 # do we want this value configurable?
-          }] : []
-
-          # notifications state
-
-          End = true
         }
-      }
+        Retry = local.retry_max_attempts != null ? [{
+          ErrorEquals = [
+            "States.ALL"
+          ]
+          IntervalSeconds = 10 # do we want this value configurable?
+          MaxAttempts     = local.retry_max_attempts
+          BackoffRate     = 1.5 # do we want this value configurable?
+        }] : []
 
-      # include logic for notications here (or space for it!)
+        # notifications state
+
+        End = true
+      }
     }
-  )
+
+    # include logic for notications here (or space for it!)
+  }
 }
