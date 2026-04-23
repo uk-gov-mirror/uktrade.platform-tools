@@ -227,11 +227,12 @@ def test_ephemeral_storage_is_within_allowed_range(storage_size):
 
 def test_count_is_not_required_for_scheduled_job():
     service_config = {
-        "name": "web",
+        "name": "check",
         "type": "Scheduled Job",
         "image": {"location": "hub.docker.com/repo/app", "port": 8080},
         "cpu": 256,
         "memory": 512,
+        "schedule": "rate(5 minutes)"
     }
     assert ServiceConfig.model_validate(service_config)
 
@@ -246,7 +247,7 @@ def test_count_is_required_for_other_service_types(type):
         "memory": 512,
         "http": {
             "target_container": "nginx",
-            "path": "x",
+            "path": "/",
             "alb": "alb-arn",
             "alias": ["test.alias.com", "test2.alias.com"],
         },
@@ -257,9 +258,9 @@ def test_count_is_required_for_other_service_types(type):
 
 def test_count_is_not_allowed_for_scheduled_job():
     service_config = {
-        "name": "web",
+        "name": "check",
         "type": "Scheduled Job",
-        "image": {"location": "hub.docker.com/repo/app", "port": 8080},
+        "image": {"location": "hub.docker.com/repo/app"},
         "cpu": 256,
         "memory": 512,
         "count": 1,
@@ -272,9 +273,9 @@ def test_count_is_not_allowed_for_scheduled_job():
 
 def test_http_is_not_allowed_for_scheduled_job():
     service_config = {
-        "name": "web",
+        "name": "check",
         "type": "Scheduled Job",
-        "image": {"location": "hub.docker.com/repo/app", "port": 8080},
+        "image": {"location": "hub.docker.com/repo/app"},
         "cpu": 256,
         "memory": 512,
         "http": {
@@ -286,5 +287,38 @@ def test_http_is_not_allowed_for_scheduled_job():
     }
     with pytest.raises(
         PlatformException, match=f"'http' is not allowed for service type == Scheduled Job"
+    ):
+        assert ServiceConfig.model_validate(service_config)
+
+def test_schedule_is_required_for_scheduled_job():
+    service_config = {
+        "name": "check",
+        "type": "Scheduled Job",
+        "image": {"location": "hub.docker.com/repo/app"},
+        "cpu": 256,
+        "memory": 512
+    }
+    with pytest.raises(PlatformException, match=f"'schedule' is required for service type == Scheduled Job"):
+        assert ServiceConfig.model_validate(service_config)
+
+@pytest.mark.parametrize("type", [("Load Balanced Web Service"), ("Backend Service")])
+def test_retries_is_not_allowed_for_other_services(type):
+    service_config = {
+        "name": "web",
+        "type": type,
+        "image": {"location": "hub.docker.com/repo/app", "port": 8080},
+        "cpu": 256,
+        "memory": 512,
+        "http": {
+            "target_container": "nginx",
+            "path": "/",
+            "alb": "alb-arn",
+            "alias": ["test.alias.com", "test2.alias.com"],
+        },
+        "count": 1,
+        "retries": 1
+    }
+    with pytest.raises(
+        PlatformException, match=f"'retries' is not allowed for service type == {type}"
     ):
         assert ServiceConfig.model_validate(service_config)

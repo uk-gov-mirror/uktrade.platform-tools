@@ -373,14 +373,29 @@ class ServiceConfig(BaseModel):
                 raise PlatformException(
                     f"'http' is not allowed for service type == {self.type.value}"
                 )
+            if self.schedule is None:
+                raise PlatformException(
+                    f"'schedule' is required for service type == {self.type.value}"
+                )
 
         else:
             if self.count is None:
                 raise PlatformException(
                     f"'count' is required for service type == {self.type.value}"
                 )
+            if self.retries is not None:
+                raise PlatformException(
+                    f"'retries' is not allowed for service type == {self.type.value}"
+                )
         return self
-
+    schedule: Optional[str] = Field(
+        default=None,
+        description="Set schedule for Scheduled Job (e.g. 'none', 'rate(5 minutes)', '5 * * * ?')."
+    )
+    retries: Optional[int] = Field(
+        default=None,
+        description="Set retries for Scheduled Job (e.g. 1)."
+    )
     sidecars: Optional[Dict[str, Sidecar]] = Field(default=None)
     image: Image = Field()
     cpu: int = Field(
