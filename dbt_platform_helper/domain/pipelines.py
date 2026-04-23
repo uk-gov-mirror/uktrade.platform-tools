@@ -102,6 +102,7 @@ class Pipelines:
                     deploy_repository,
                     account_name,
                     self.platform_helper_versioning.get_environment_pipeline_modules_source(),
+                    self.platform_helper_versioning.get_version_tracker_module_source(),
                     deploy_branch,
                     account_id,
                     self.platform_helper_versioning.get_pinned_version(),
@@ -128,6 +129,7 @@ class Pipelines:
                 ecrs_that_need_importing,
                 deploy_repository,
                 self.platform_helper_versioning.get_codebase_pipeline_modules_source(),
+                self.platform_helper_versioning.get_version_tracker_module_source_override(),
                 workspace,
             )
 
@@ -163,7 +165,8 @@ class Pipelines:
         application: str,
         deploy_repository: str,
         aws_account: str,
-        module_source: str,
+        env_pipeline_module_source: str,
+        version_tracker_module_source: str,
         deploy_branch: str,
         aws_account_id: str,
         pinned_version: str,
@@ -174,17 +177,25 @@ class Pipelines:
 
         pipelines = self._get_pipelines_list_for_account(config, aws_account)
 
+        platform_version = (
+            pinned_version
+            if pinned_version is not None
+            else config["default_versions"]["platform-helper"]
+        )
+
         contents = env_pipeline_template.render(
             {
                 "application": application,
                 "deploy_repository": deploy_repository,
                 "aws_account": aws_account,
-                "module_source": module_source,
+                "env_pipeline_module_source": env_pipeline_module_source,
+                "version_tracker_module_source": version_tracker_module_source,
                 "deploy_branch": deploy_branch,
                 "terraform_version": SUPPORTED_TERRAFORM_VERSION,
                 "aws_provider_version": SUPPORTED_AWS_PROVIDER_VERSION,
                 "deploy_account_id": aws_account_id,
                 "pinned_version": pinned_version,
+                "platform_version": platform_version,
                 "pipelines": json.dumps(pipelines),
                 "workspace": workspace,
             }
