@@ -15,8 +15,9 @@ variable "platform_extensions" {
 }
 
 variable "custom_iam_policy_json" {
-  type    = string
-  default = null
+  type        = string
+  default     = null
+  description = "Optional custom IAM policy JSON to attach to the ECS task role"
 
   validation {
     condition     = var.custom_iam_policy_json == null ? true : length(var.custom_iam_policy_json) <= 6144

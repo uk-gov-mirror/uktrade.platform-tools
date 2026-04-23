@@ -11,8 +11,6 @@ locals {
   secrets           = values(coalesce(var.service_config.secrets, {}))
 
   ecs_service_connect_required = (try(var.service_config.image.port, null) != null) ? 1 : 0
-  # REMOVE
-  # target_container             = try(var.service_config.http.target_container, "")
 
   central_log_group_arns        = jsondecode(data.aws_ssm_parameter.log-destination-arn.value)
   central_log_group_destination = var.environment == "prod" ? local.central_log_group_arns["prod"] : local.central_log_group_arns["dev"]
@@ -174,7 +172,6 @@ locals {
           containerPath = path
         }
       ])
-
       # Ensure main container always starts last
       dependsOn = concat([
         for sidecar in keys(coalesce(var.service_config.sidecars, {})) : {
@@ -202,11 +199,8 @@ locals {
         startPeriod = var.service_config.image.healthcheck.start_period
       }
     } : {},
-
-    try(var.service_config.image.port, null) != null ? { portMappings = [{ containerPort = var.service_config.image.port, protocol = "tcp" }] } : {},
   )
 
-  # Intialises /tmp as writable before the main container starts
   permissions_container = merge(local.default_container_config, {
     name      = "writable_directories_permission"
     image     = "public.ecr.aws/docker/library/alpine:latest"
@@ -224,7 +218,6 @@ locals {
     ])
   })
 
-
   sidecar_containers = [
     for sidecar_name, sidecar in coalesce(var.service_config.sidecars, {}) : merge(
       local.default_container_config,
@@ -239,11 +232,9 @@ locals {
         secrets = [
           for k, v in coalesce(sidecar.secrets, {}) : { name = k, valueFrom = v }
         ]
-
         portMappings = sidecar.port != null ? [
           { containerPort = sidecar.port, protocol = "tcp" }
         ] : []
-
       },
       try(sidecar.healthcheck, null) != null ?
       {
