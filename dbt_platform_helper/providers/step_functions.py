@@ -30,7 +30,7 @@ class StepFunctions:
       if not matches:
           raise StateMachineNotFoundException(self.application_name, self.env, job_name)
       if len(matches) > 1:
-          raise multipleStateMachinesFoundException(self.application_name, self.env, job_name, matches)
+          raise MultipleStateMachinesFoundException(self.application_name, self.env, job_name, matches)
       return matches[0]          
                     
     def start_execution(self, state_machine_arn: str, name: Optional[str] = None) -> str:
