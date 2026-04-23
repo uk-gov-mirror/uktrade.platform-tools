@@ -231,7 +231,7 @@ run "test_state_machine_definition_has_expected_retry" {
 
 run "test_state_machine_definition_has_no_timeout" {
   command = plan
-  
+
   assert {
     condition     = local.timeout_seconds == 86400
     error_message = "Should have a timeout of 86400"
