@@ -250,3 +250,26 @@ More generally - how do we handle testing shared functionality in both ecs-servi
 - Duplicating all tests that are relevant from ecs-service to ecs-scheduled-job?
 - Splitting out shared module functionality into a 3rd module, and then having ecs-service and ecs-scheduled-job call the 3rd module? The 3rd module owns all the shared tests 
  */
+
+run "test_ecs_task_default_platform_is_x86_64" {
+  command = plan
+
+  assert {
+    condition     = local.cpu_architecture == "X86_64"
+    error_message = "Should be 'X86_64'"
+  }
+}
+
+# Is this a useful test? (Since we are already checking if not specifying a platform results in X86_64)
+run "test_ecs_task_platform_is_arm64" {
+  command = plan
+
+  variables {
+    service_config = merge(var.service_config, { platform = "arm64" })
+  }
+
+  assert {
+    condition     = local.cpu_architecture == "ARM64"
+    error_message = "Should be 'ARM64'"
+  }
+}
