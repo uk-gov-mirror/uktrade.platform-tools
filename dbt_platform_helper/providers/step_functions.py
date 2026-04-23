@@ -63,7 +63,7 @@ class StartExecutionFailedException(AWSException):
             f"Failed to start execution for state machine '{state_machine_arn}' with error: {error}"
         )
 
-class multipleStateMachinesFoundException(AWSException):
+class MultipleStateMachinesFoundException(AWSException):
     def __init__(self, application_name: str, environment: str, job_name: str, state_machine_arns: list[str]):
         super().__init__(
             f"""Multiple Step Function state machines found for job '{job_name}' """
