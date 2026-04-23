@@ -216,7 +216,6 @@ run "test_state_machine_definition_has_no_retry" {
   }
 }
 
-# Is this a useful test? (Since we are already checking if Retry value is empty)
 run "test_state_machine_definition_has_expected_retry" {
   command = plan
 
@@ -230,6 +229,14 @@ run "test_state_machine_definition_has_expected_retry" {
   }
 }
 
+run "test_state_machine_definition_has_no_timeout" {
+  command = plan
+  
+  assert {
+    condition     = local.timeout_seconds == 86400
+    error_message = "Should have a timeout of 86400"
+  }
+}
 
 /* 
 ECS tests:

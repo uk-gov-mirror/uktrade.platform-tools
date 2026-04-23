@@ -15,8 +15,10 @@ locals {
   central_log_group_arns        = jsondecode(data.aws_ssm_parameter.log-destination-arn.value)
   central_log_group_destination = var.environment == "prod" ? local.central_log_group_arns["prod"] : local.central_log_group_arns["dev"]
 
-  # retries is an optional number (max attempts). Defaults to 1; set to 0 to disable the Retry block.   
   retry_max_attempts = lookup(var.service_config, "retries", null) # step function level
+
+  # timeout_seconds = lookup(var.service_config, "timeout", 86400) # TODO: figure out why lookup() breaks the test_state_machine_definition_has_no_timeout test
+  timeout_seconds = var.service_config.timeout != null ? var.service_config.timeout : 86400 # set timeout to 24 hours to avoid runaway state machines caused by the default provided by AWS (99999999, which is approximately 3 years). See here: https://docs.aws.amazon.com/step-functions/latest/dg/state-task.html
 
   # CPU architecture — defaults to X86_64; set platform = "arm64" for Graviton.                         
   cpu_architecture = try(lower(var.service_config.platform), null) == "arm64" ? "ARM64" : "X86_64"
@@ -264,9 +266,10 @@ locals {
 
   ### State Machine
   state_machine_definition = {
-    Version = "1.0"
-    Comment = "Run AWS Fargate task for Scheduled Job ${local.full_service_name}"
-    StartAt = "run-fargate-task"
+    Version        = "1.0"
+    Comment        = "Run AWS Fargate task for Scheduled Job ${local.full_service_name}"
+    TimeoutSeconds = local.timeout_seconds
+    StartAt        = "run-fargate-task"
     States = {
       run-fargate-task = {
         Type     = "Task"
