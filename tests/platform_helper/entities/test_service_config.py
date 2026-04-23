@@ -223,3 +223,49 @@ def test_ephemeral_storage_is_within_allowed_range(storage_size):
         ),
     ):
         Storage.model_validate({"ephemeral": storage_size})
+
+
+def test_count_is_not_required_for_scheduled_job():
+    service_config = {
+        "name": "web",
+        "type": "Scheduled Job",
+        "image": {"location": "hub.docker.com/repo/app", "port": 8080},
+        "cpu": 256,
+        "memory": 512,
+    }
+    assert ServiceConfig.model_validate(service_config)
+
+
+@pytest.mark.parametrize("type", [("Load Balanced Web Service"), ("Backend Service")])
+def test_count_is_required_for_other_service_types(type):
+    service_config = {
+        "name": "web",
+        "type": type,
+        "image": {"location": "hub.docker.com/repo/app", "port": 8080},
+        "cpu": 256,
+        "memory": 512,
+        "http": {
+            "target_container": "nginx",
+            "path": "x",
+            "alb": "alb-arn",
+            "alias": ["test.alias.com", "test2.alias.com"],
+        },
+    }
+    with pytest.raises(PlatformException, match=f"'count' is required for service type == {type}"):
+        assert ServiceConfig.model_validate(service_config)
+
+
+def test_count_is_not_allowed_for_scheduled_job():
+    service_config = {
+        "name": "web",
+        "type": "Scheduled Job",
+        "image": {"location": "hub.docker.com/repo/app", "port": 8080},
+        "cpu": 256,
+        "memory": 512,
+        # "http": {"target_container": "nginx", "path": "x", "alb": "alb-arn", "alias": ["test.alias.com", "test2.alias.com"]}
+        "count": 1,
+    }
+    with pytest.raises(
+        PlatformException, match=f"'count' is not needed for service type == Scheduled Job"
+    ):
+        assert ServiceConfig.model_validate(service_config)

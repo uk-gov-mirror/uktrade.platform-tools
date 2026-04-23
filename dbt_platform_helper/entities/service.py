@@ -361,6 +361,21 @@ class ServiceConfig(BaseModel):
             )
         return self
 
+    @model_validator(mode="after")
+    def check_count_for_scheduled_job(self):
+        # Could add all checks for scheduled jobs here
+        if self.type == ServiceType.SCHEDULED_JOB:
+            if self.count is not None:
+                raise PlatformException(
+                    f"'count' is not needed for service type == {self.type.value}"
+                )
+        else:
+            if self.count is None:
+                raise PlatformException(
+                    f"'count' is required for service type == {self.type.value}"
+                )
+        return self
+
     sidecars: Optional[Dict[str, Sidecar]] = Field(default=None)
     image: Image = Field()
     cpu: int = Field(
@@ -369,8 +384,9 @@ class ServiceConfig(BaseModel):
     memory: int = Field(
         description="Memory in MiB reserved for the ECS task (e.g. 256, 512, 1024)."
     )
-    count: Union[int, Count] = Field(
-        description="Desired task count — either a fixed integer or an autoscaling policy map with 'range', 'cooldown', and at least one of 'cpu_percentage', 'memory_percentage', or 'requests_per_minute' metrics."
+    count: Optional[Union[int, Count]] = Field(
+        default=None,
+        description="Desired task count — either a fixed integer or an autoscaling policy map with 'range', 'cooldown', and at least one of 'cpu_percentage', 'memory_percentage', or 'requests_per_minute' metrics.",
     )
     exec: Optional[bool] = Field(
         description="Enable ECS Exec (remote command execution) for running ECS tasks.",
