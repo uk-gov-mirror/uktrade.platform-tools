@@ -362,13 +362,18 @@ class ServiceConfig(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def check_count_for_scheduled_job(self):
+    def check_allowed_fields_in_scheduled_job(self):
         # Could add all checks for scheduled jobs here
         if self.type == ServiceType.SCHEDULED_JOB:
             if self.count is not None:
                 raise PlatformException(
-                    f"'count' is not needed for service type == {self.type.value}"
+                    f"'count' is not allowed for service type == {self.type.value}"
                 )
+            if self.http is not None:
+                raise PlatformException(
+                    f"'http' is not allowed for service type == {self.type.value}"
+                )
+
         else:
             if self.count is None:
                 raise PlatformException(

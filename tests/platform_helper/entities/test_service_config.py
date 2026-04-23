@@ -262,10 +262,29 @@ def test_count_is_not_allowed_for_scheduled_job():
         "image": {"location": "hub.docker.com/repo/app", "port": 8080},
         "cpu": 256,
         "memory": 512,
-        # "http": {"target_container": "nginx", "path": "x", "alb": "alb-arn", "alias": ["test.alias.com", "test2.alias.com"]}
         "count": 1,
     }
     with pytest.raises(
-        PlatformException, match=f"'count' is not needed for service type == Scheduled Job"
+        PlatformException, match=f"'count' is not allowed for service type == Scheduled Job"
+    ):
+        assert ServiceConfig.model_validate(service_config)
+
+
+def test_http_is_not_allowed_for_scheduled_job():
+    service_config = {
+        "name": "web",
+        "type": "Scheduled Job",
+        "image": {"location": "hub.docker.com/repo/app", "port": 8080},
+        "cpu": 256,
+        "memory": 512,
+        "http": {
+            "target_container": "nginx",
+            "path": "x",
+            "alb": "alb-arn",
+            "alias": ["test.alias.com", "test2.alias.com"],
+        },
+    }
+    with pytest.raises(
+        PlatformException, match=f"'http' is not allowed for service type == Scheduled Job"
     ):
         assert ServiceConfig.model_validate(service_config)
