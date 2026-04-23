@@ -1198,3 +1198,25 @@ run "cdn_domain_list_precondition_fails_when_domains_do_not_match" {
     null_resource.validate_cdn_domains
   ]
 }
+
+run "dnb_domain_list_precondition_pass_if_both_lists_are_empty" {
+  command = plan
+
+  override_data {
+    target = data.aws_ssm_parameters_by_path.cdn_domain_list
+    values = {
+      names  = ["/platform/my-application/dev/cdn_domains_list/value"]
+      values = []
+      types  = ["String"]
+      arns   = ["arn:aws:ssm:us-east-1:123456789012:parameter/platform/my-application/dev/cdn_domains_list/value"]
+    }
+  }
+
+  variables {
+    config = {
+
+    }
+  }
+}
+
+# local.cdn_domains_list is not defined
