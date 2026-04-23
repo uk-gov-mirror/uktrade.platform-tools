@@ -8,42 +8,6 @@ override_data {
 }
 
 override_data {
-  target = data.aws_region.current
-  values = {
-    name = "eu-west-2"
-  }
-}
-
-override_data {
-  target = data.aws_vpc.vpc
-  values = {
-    id         = "vpc-00112233aabbccdef"
-    cidr_block = "10.0.0.0/16"
-  }
-}
-
-override_data {
-  target = data.aws_iam_policy_document.assume_role
-  values = {
-    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
-  }
-}
-
-override_data {
-  target = data.aws_iam_policy_document.execute_command
-  values = {
-    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
-  }
-}
-
-override_data {
-  target = data.aws_iam_policy_document.appconfig
-  values = {
-    json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
-  }
-}
-
-override_data {
   target = data.aws_iam_policy_document.eventbridge_scheduler_assume_role
   values = {
     json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
@@ -58,18 +22,25 @@ override_data {
 }
 
 override_data {
-  target = data.aws_iam_policy_document.service_logs
+  target = data.aws_iam_policy_document.start_ecs_task
   values = {
     json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
   }
 }
 
-override_data {
-  target = data.aws_ssm_parameter.log-destination-arn
-  values = {
-    value = "{\"dev\":\"arn:aws:logs:eu-west-2:001122334455:log-group:/central/dev\",\"prod\":\"arn:aws:logs:eu-west-2:001122334455:log-group:/central/prod\"}"
-  }
-}
+# override_data {
+#   target = data.aws_iam_policy_document.service_logs
+#   values = {
+#     json = "{\"Sid\": \"PlaceholderPolicyDoesNotMatter\"}"
+#   }
+# }
+
+# override_data {
+#   target = data.aws_ssm_parameter.log-destination-arn
+#   values = {
+#     value = "{\"dev\":\"arn:aws:logs:eu-west-2:001122334455:log-group:/central/dev\",\"prod\":\"arn:aws:logs:eu-west-2:001122334455:log-group:/central/prod\"}"
+#   }
+# }
 
 
 variables {
@@ -249,24 +220,24 @@ More generally - how do we handle testing shared functionality in both ecs-servi
 - Splitting out shared module functionality into a 3rd module, and then having ecs-service and ecs-scheduled-job call the 3rd module? The 3rd module owns all the shared tests 
  */
 
-run "test_ecs_task_default_platform_is_x86_64" {
-  command = plan
+# run "test_ecs_task_default_platform_is_x86_64" {
+#   command = plan
 
-  assert {
-    condition     = local.cpu_architecture == "X86_64"
-    error_message = "Should be 'X86_64'"
-  }
-}
+#   assert {
+#     condition     = local.cpu_architecture == "X86_64"
+#     error_message = "Should be 'X86_64'"
+#   }
+# }
 
-run "test_ecs_task_platform_is_arm64" {
-  command = plan
+# run "test_ecs_task_platform_is_arm64" {
+#   command = plan
 
-  variables {
-    service_config = merge(var.service_config, { platform = "arm64" })
-  }
+#   variables {
+#     service_config = merge(var.service_config, { platform = "arm64" })
+#   }
 
-  assert {
-    condition     = local.cpu_architecture == "ARM64"
-    error_message = "Should be 'ARM64'"
-  }
-}
+#   assert {
+#     condition     = local.cpu_architecture == "ARM64"
+#     error_message = "Should be 'ARM64'"
+#   }
+# }

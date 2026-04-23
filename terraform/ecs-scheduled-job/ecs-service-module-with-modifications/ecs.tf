@@ -1,8 +1,4 @@
-### ECS
-data "aws_ecs_cluster" "cluster" {
-  cluster_name = "${var.application}-${var.environment}-cluster"
-}
-
+# Adds in a separate task definition resource to be used by Scheduled Jobs only
 resource "aws_ecs_task_definition" "service" {
   family                   = "${local.full_service_name}-task-def"
   requires_compatibilities = ["FARGATE"]
