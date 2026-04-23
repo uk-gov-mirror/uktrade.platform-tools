@@ -25,7 +25,6 @@ def run(app: str, env: str, name: str):
     try:
         application = load_application(app=app, env=env)
 
-        # TODO This is a workaround until DBTP-2754 is fixed
         try:
             sfn_client = application.environments[env].session.client("stepfunctions")
         except KeyError:
