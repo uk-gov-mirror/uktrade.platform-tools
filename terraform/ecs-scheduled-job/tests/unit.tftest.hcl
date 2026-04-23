@@ -176,11 +176,16 @@ run "test_rate_schedule_expression_is_enabled" {
   }
 }
 
-run "test_cron_schedule_expression_is_enabled" {
+run "test_cron_schedule_expression_is_as_expected" {
   command = plan
 
   variables {
     service_config = merge(var.service_config, { schedule = "5 * * * ?" })
+  }
+
+  assert {
+    condition     = aws_scheduler_schedule.this.schedule_expression == "5 * * * ?"
+    error_message = "Should be '5 * * * ?'"
   }
 
   assert {
@@ -195,20 +200,6 @@ run "test_none_schedule_expression_defaults_to_rate_5_minutes" {
   assert {
     condition     = aws_scheduler_schedule.this.schedule_expression == "rate(5 minutes)"
     error_message = "Should be 'rate(5 minutes)'"
-  }
-}
-
-# Is this a useful test? (Since we are already checking if "none" results in rate(5 minutes))
-run "test_cron_schedule_expression_gives_expected_cron" {
-  command = plan
-
-  variables {
-    service_config = merge(var.service_config, { schedule = "5 * * * ?" })
-  }
-
-  assert {
-    condition     = aws_scheduler_schedule.this.schedule_expression == "5 * * * ?"
-    error_message = "Should be '5 * * * ?'"
   }
 }
 
@@ -260,7 +251,6 @@ run "test_ecs_task_default_platform_is_x86_64" {
   }
 }
 
-# Is this a useful test? (Since we are already checking if not specifying a platform results in X86_64)
 run "test_ecs_task_platform_is_arm64" {
   command = plan
 
