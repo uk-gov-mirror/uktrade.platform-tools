@@ -232,7 +232,7 @@ def test_count_is_not_required_for_scheduled_job():
         "image": {"location": "hub.docker.com/repo/app", "port": 8080},
         "cpu": 256,
         "memory": 512,
-        "schedule": "rate(5 minutes)"
+        "schedule": "rate(5 minutes)",
     }
     assert ServiceConfig.model_validate(service_config)
 
@@ -290,16 +290,20 @@ def test_http_is_not_allowed_for_scheduled_job():
     ):
         assert ServiceConfig.model_validate(service_config)
 
+
 def test_schedule_is_required_for_scheduled_job():
     service_config = {
         "name": "check",
         "type": "Scheduled Job",
         "image": {"location": "hub.docker.com/repo/app"},
         "cpu": 256,
-        "memory": 512
+        "memory": 512,
     }
-    with pytest.raises(PlatformException, match=f"'schedule' is required for service type == Scheduled Job"):
+    with pytest.raises(
+        PlatformException, match=f"'schedule' is required for service type == Scheduled Job"
+    ):
         assert ServiceConfig.model_validate(service_config)
+
 
 @pytest.mark.parametrize("type", [("Load Balanced Web Service"), ("Backend Service")])
 def test_retries_is_not_allowed_for_other_services(type):
@@ -316,9 +320,33 @@ def test_retries_is_not_allowed_for_other_services(type):
             "alias": ["test.alias.com", "test2.alias.com"],
         },
         "count": 1,
-        "retries": 1
+        "retries": 1,
     }
     with pytest.raises(
         PlatformException, match=f"'retries' is not allowed for service type == {type}"
+    ):
+        assert ServiceConfig.model_validate(service_config)
+
+
+# timeout
+@pytest.mark.parametrize("type", [("Load Balanced Web Service"), ("Backend Service")])
+def test_timeout_is_not_allowed_for_other_services(type):
+    service_config = {
+        "name": "web",
+        "type": type,
+        "image": {"location": "hub.docker.com/repo/app", "port": 8080},
+        "cpu": 256,
+        "memory": 512,
+        "http": {
+            "target_container": "nginx",
+            "path": "/",
+            "alb": "alb-arn",
+            "alias": ["test.alias.com", "test2.alias.com"],
+        },
+        "count": 1,
+        "timeout": 300,
+    }
+    with pytest.raises(
+        PlatformException, match=f"'timeout' is not allowed for service type == {type}"
     ):
         assert ServiceConfig.model_validate(service_config)

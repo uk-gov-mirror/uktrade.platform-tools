@@ -377,7 +377,6 @@ class ServiceConfig(BaseModel):
                 raise PlatformException(
                     f"'schedule' is required for service type == {self.type.value}"
                 )
-
         else:
             if self.count is None:
                 raise PlatformException(
@@ -387,14 +386,21 @@ class ServiceConfig(BaseModel):
                 raise PlatformException(
                     f"'retries' is not allowed for service type == {self.type.value}"
                 )
+            if self.timeout is not None:
+                raise PlatformException(
+                    f"'timeout' is not allowed for service type == {self.type.value}"
+                )
         return self
+
     schedule: Optional[str] = Field(
         default=None,
-        description="Set schedule for Scheduled Job (e.g. 'none', 'rate(5 minutes)', '5 * * * ?')."
+        description="Set schedule for Scheduled Job (e.g. 'none', 'rate(5 minutes)', '5 * * * ?').",
     )
     retries: Optional[int] = Field(
-        default=None,
-        description="Set retries for Scheduled Job (e.g. 1)."
+        default=None, description="Set retries for Scheduled Job (e.g. 1)."
+    )
+    timeout: Optional[int] = Field(
+        default=None, description="Set timeout for Scheduled Job in seconds (e.g. 300)."
     )
     sidecars: Optional[Dict[str, Sidecar]] = Field(default=None)
     image: Image = Field()
