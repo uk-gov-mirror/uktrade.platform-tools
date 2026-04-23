@@ -1,8 +1,16 @@
 locals {
+
+  managed_by_tag = compact([
+    var.environment != null && var.service_name != null ? "Service" : null,
+    var.environment != null && var.service_name == null ? "Environment" : null,
+    var.pipeline_type == "codebase-pipeline" ? "Codebase Pipeline" : null,
+    var.pipeline_type == "environment-pipeline" ? "Environment Pipeline" : null,
+  ])
+
   tags = merge(
     {
       application = var.application
-      managed-by  = "DBT Platform - Terraform"
+      managed-by  = "DBT Platform - ${one(local.managed_by_tag)} Terraform"
     },
     var.environment != null ? {
       environment = var.environment

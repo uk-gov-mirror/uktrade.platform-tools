@@ -1,9 +1,11 @@
 variable "platform_version" {
-  type = string
+  type     = string
+  nullable = false
 }
 
 variable "application" {
-  type = string
+  type     = string
+  nullable = false
 }
 
 variable "environment" {
