@@ -34,7 +34,7 @@ locals {
 
   dns_account_ids = distinct([for env in local.base_env_config : env.dns_account])
 
-  cache_invalidation_assumed_roles = setunion([for i, pipeline in var.pipelines : toset([for env in pipeline.environments : "arn:aws:iam::${local.base_env_config[env.name].dns_account}:role/${var.application}-${env.name}-pipeline-deployment-role"])])
+  cache_invalidation_assumed_roles = setunion([for i, pipeline in var.pipelines : toset([for env in pipeline.environments : "arn:aws:iam::${local.base_env_config[env.name].dns_account}:role/${var.application}-${env.name}-pipeline-deployment-role"])]...)
 
   environments_requiring_cache_invalidation = distinct([for d in try(values(var.cache_invalidation.domains), []) : d.environment])
 
