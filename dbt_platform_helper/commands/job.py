@@ -14,14 +14,15 @@ from dbt_platform_helper.utils.click import ClickDocOptGroup
 @click.group(cls=ClickDocOptGroup)
 def job():
     """Commands for managing a scheduled job."""
-    
+
+
 @job.command()
 @click.option("--app", "-a", help="Application name", required=True)
 @click.option("--env", "-e", help="Environment name", required=True)
 @click.option("--name", "-n", help="Name of the scheduled job", required=True)
 def run(app: str, env: str, name: str):
     """Runs a scheduled job on demand."""
-    
+
     try:
         application = load_application(app=app, env=env)
 
@@ -39,4 +40,3 @@ def run(app: str, env: str, name: str):
         JobManager(sfn_provider=sfn_provider).run(app, env, name)
     except PlatformException as err:
         ClickIOProvider().abort_with_error(str(err))
-        
