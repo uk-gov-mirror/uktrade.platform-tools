@@ -165,3 +165,20 @@ resource "aws_ssm_parameter" "environment_data" {
 data "aws_ssm_parameter" "log_destination_arn" {
   name = "/copilot/tools/central_log_groups"
 }
+
+resource "null_resource" "check_extension_uses_managed_ingress" {
+  for_each = merge(
+    local.alb,
+    {
+      for ext_name, ext_cfg in local.s3 :
+      ext_name => ext_cfg
+      if lookup(ext_cfg, "serve_static_content", false)
+    },
+  )
+  lifecycle {
+    precondition {
+      condition = lookup(each.value, "managed_ingress", false)
+      error_message = "Expected managed_ingress to be set to true for extension '${each.key}', environment '${var.environment}'"
+    }
+  }
+}
